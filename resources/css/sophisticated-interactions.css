@@ -1,0 +1,349 @@
+/* Sophisticated Interaction Design Styles */
+
+/* Smooth focus states for all interactive elements */
+*:focus-visible {
+    outline: 2px solid var(--coffee-accent, #8b4513);
+    outline-offset: 2px;
+    transition: outline-offset 0.2s ease;
+}
+
+/* Enhanced button hover states */
+button:not(:disabled):hover {
+    cursor: pointer;
+}
+
+button:not(:disabled):active {
+    transform: scale(0.98);
+}
+
+/* Smooth transitions for all elements */
+* {
+    transition-property: color, background-color, border-color,
+        text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+}
+
+/* Micro-animations for interactive elements */
+@keyframes subtle-bounce {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-2px);
+    }
+}
+
+@keyframes gentle-shake {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-2px);
+    }
+    75% {
+        transform: translateX(2px);
+    }
+}
+
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Smooth card hover effects */
+.card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1),
+        0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Elegant input focus states */
+input:focus,
+textarea:focus,
+select:focus {
+    box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+}
+
+/* Smooth loading states */
+.loading-shimmer {
+    background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Elegant status transitions */
+.status-transition {
+    animation: fade-in-up 0.4s ease-out;
+}
+
+/* Smooth modal animations */
+.modal-enter {
+    animation: scale-in 0.3s ease-out;
+}
+
+.modal-exit {
+    animation: scale-in 0.2s ease-in reverse;
+}
+
+/* Premium button press effect */
+.button-press:active {
+    transform: scale(0.97);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Elegant tooltip animations */
+.tooltip {
+    animation: fade-in-up 0.2s ease-out;
+}
+
+/* Smooth notification slide */
+@keyframes slide-in-right {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.notification-enter {
+    animation: slide-in-right 0.3s ease-out;
+}
+
+/* Sophisticated ripple effect */
+@keyframes ripple {
+    0% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}
+
+.ripple-effect {
+    position: relative;
+    overflow: hidden;
+}
+
+.ripple-effect::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.ripple-effect:active::after {
+    width: 200px;
+    height: 200px;
+}
+
+/* Smooth scroll behavior */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Enhanced focus for accessibility */
+.focus-ring:focus {
+    outline: 2px solid #8b4513;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* Elegant skeleton loading */
+.skeleton {
+    background: linear-gradient(90deg, #f8f9fa 25%, #e9ecef 50%, #f8f9fa 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Smooth page transitions */
+.page-transition-enter {
+    animation: fade-in-up 0.4s ease-out;
+}
+
+/* Premium hover glow effect */
+.hover-glow:hover {
+    box-shadow: 0 0 20px rgba(139, 69, 19, 0.2);
+}
+
+/* Elegant progress bar animation */
+@keyframes progress-bar {
+    0% {
+        width: 0%;
+    }
+}
+
+.progress-animate {
+    animation: progress-bar 1s ease-out forwards;
+}
+
+/* Smooth checkbox/radio animations */
+input[type="checkbox"],
+input[type="radio"] {
+    transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+    animation: subtle-bounce 0.3s ease;
+}
+
+/* Elegant dropdown animations */
+.dropdown-enter {
+    animation: fade-in-up 0.2s ease-out;
+}
+
+/* Smooth image loading */
+img {
+    transition: opacity 0.3s ease;
+}
+
+img[loading="lazy"] {
+    opacity: 0;
+}
+
+img[loading="lazy"].loaded {
+    opacity: 1;
+}
+
+/* Premium card stack effect */
+.card-stack {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-stack:hover {
+    transform: translateY(-2px) scale(1.02);
+}
+
+/* Elegant form validation states */
+.input-error {
+    animation: gentle-shake 0.4s ease;
+}
+
+.input-success {
+    animation: subtle-bounce 0.4s ease;
+}
+
+/* Smooth tab transitions */
+.tab-content {
+    animation: fade-in-up 0.3s ease-out;
+}
+
+/* Premium loading dots */
+@keyframes loading-dots {
+    0%,
+    20% {
+        opacity: 0.3;
+        transform: scale(0.8);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0.3;
+        transform: scale(0.8);
+    }
+}
+
+.loading-dot {
+    animation: loading-dots 1.4s ease-in-out infinite;
+}
+
+.loading-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.loading-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+/* Elegant badge pulse */
+.badge-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Smooth accordion animations */
+.accordion-content {
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+/* Premium gradient animations */
+@keyframes gradient-shift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.gradient-animate {
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+}

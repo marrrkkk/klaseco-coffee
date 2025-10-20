@@ -1,0 +1,449 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import sophisticated interaction design styles */
+@import "./sophisticated-interactions.css";
+
+/* Premium minimalist coffee theme styles */
+@layer components {
+    /* Premium typography */
+    .premium-heading {
+        @apply font-light tracking-wide text-dark-gray;
+    }
+
+    .premium-body {
+        @apply font-light text-medium-gray leading-relaxed;
+    }
+
+    .premium-accent {
+        @apply text-coffee-accent;
+    }
+    /* Brand gradients */
+    .coffee-gradient {
+        background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%);
+    }
+
+    .coffee-gradient-light {
+        background: linear-gradient(135deg, #d2b48c 0%, #a0522d 100%);
+    }
+
+    .coffee-gradient-dark {
+        background: linear-gradient(135deg, #654321 0%, #4a2c17 100%);
+    }
+
+    /* Enhanced shadows */
+    .coffee-shadow {
+        box-shadow: 0 4px 6px -1px rgba(139, 69, 19, 0.1),
+            0 2px 4px -1px rgba(139, 69, 19, 0.06);
+    }
+
+    .coffee-shadow-lg {
+        box-shadow: 0 10px 15px -3px rgba(139, 69, 19, 0.1),
+            0 4px 6px -2px rgba(139, 69, 19, 0.05);
+    }
+
+    .coffee-shadow-xl {
+        box-shadow: 0 20px 25px -5px rgba(139, 69, 19, 0.1),
+            0 10px 10px -5px rgba(139, 69, 19, 0.04);
+    }
+
+    /* Form elements */
+    .coffee-input {
+        @apply border-coffee-300 focus:border-coffee-500 focus:ring-coffee-500 
+               bg-white placeholder-coffee-400 text-coffee-900 rounded-lg;
+    }
+
+    .coffee-select {
+        @apply border-coffee-300 focus:border-coffee-500 focus:ring-coffee-500 
+               bg-white text-coffee-900 rounded-lg;
+    }
+
+    .coffee-checkbox {
+        @apply rounded border-coffee-300 text-coffee-600 focus:ring-coffee-500;
+    }
+
+    /* Button variants */
+    .coffee-button {
+        @apply bg-coffee-600 hover:bg-coffee-700 active:bg-coffee-800 
+               text-white font-medium py-2 px-4 rounded-lg 
+               transition-all duration-200 shadow-sm hover:shadow-md
+               focus:outline-none focus:ring-2 focus:ring-coffee-500 focus:ring-offset-2;
+    }
+
+    .coffee-button-lg {
+        @apply bg-coffee-600 hover:bg-coffee-700 active:bg-coffee-800 
+               text-white font-semibold py-3 px-6 rounded-lg text-lg
+               transition-all duration-200 shadow-md hover:shadow-lg
+               focus:outline-none focus:ring-2 focus:ring-coffee-500 focus:ring-offset-2;
+    }
+
+    .coffee-button-outline {
+        @apply border-2 border-coffee-600 text-coffee-600 hover:bg-coffee-600 hover:text-white 
+               font-medium py-2 px-4 rounded-lg transition-all duration-200
+               focus:outline-none focus:ring-2 focus:ring-coffee-500 focus:ring-offset-2;
+    }
+
+    .coffee-button-ghost {
+        @apply text-coffee-600 hover:bg-coffee-50 hover:text-coffee-700 
+               font-medium py-2 px-4 rounded-lg transition-all duration-200
+               focus:outline-none focus:ring-2 focus:ring-coffee-500 focus:ring-offset-2;
+    }
+
+    .coffee-button-danger {
+        @apply bg-red-600 hover:bg-red-700 active:bg-red-800 
+               text-white font-medium py-2 px-4 rounded-lg 
+               transition-all duration-200 shadow-sm hover:shadow-md
+               focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+    }
+
+    /* Card components */
+    .coffee-card {
+        @apply bg-white rounded-lg border border-coffee-200 coffee-shadow 
+               hover:coffee-shadow-lg transition-all duration-200;
+    }
+
+    .coffee-card-header {
+        @apply bg-coffee-50 border-b border-coffee-200 px-6 py-4 rounded-t-lg;
+    }
+
+    .coffee-card-body {
+        @apply px-6 py-4;
+    }
+
+    /* Status badges */
+    .status-badge {
+        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    }
+
+    .status-pending {
+        @apply bg-yellow-100 text-yellow-800;
+    }
+
+    .status-accepted {
+        @apply bg-blue-100 text-blue-800;
+    }
+
+    .status-preparing {
+        @apply bg-orange-100 text-orange-800;
+    }
+
+    .status-ready {
+        @apply bg-green-100 text-green-800;
+    }
+
+    .status-completed {
+        @apply bg-gray-100 text-gray-800;
+    }
+
+    .status-rejected {
+        @apply bg-red-100 text-red-800;
+    }
+
+    /* Mobile optimizations */
+    .mobile-container {
+        @apply max-w-md mx-auto min-h-screen bg-white shadow-xl;
+    }
+
+    .mobile-header {
+        @apply bg-coffee-600 text-white shadow-lg sticky top-0 z-30;
+    }
+
+    .mobile-content {
+        @apply pb-20; /* Space for fixed bottom elements */
+    }
+
+    .mobile-bottom-bar {
+        @apply fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-coffee-200 shadow-lg;
+    }
+
+    /* Desktop optimizations */
+    .desktop-container {
+        @apply max-w-7xl mx-auto px-6;
+    }
+
+    .desktop-header {
+        @apply bg-coffee-600 text-white shadow-lg;
+    }
+
+    .desktop-sidebar {
+        @apply w-64 bg-white border-r border-coffee-200 coffee-shadow;
+    }
+
+    .desktop-main {
+        @apply flex-1 bg-coffee-50 min-h-screen;
+    }
+
+    /* Loading states */
+    .loading-spinner {
+        @apply animate-spin rounded-full border-b-2 border-coffee-600;
+    }
+
+    .loading-pulse {
+        @apply animate-pulse bg-coffee-100 rounded;
+    }
+
+    /* Responsive text */
+    .text-responsive-xl {
+        @apply text-lg sm:text-xl md:text-2xl lg:text-3xl;
+    }
+
+    .text-responsive-lg {
+        @apply text-base sm:text-lg md:text-xl lg:text-2xl;
+    }
+
+    .text-responsive-base {
+        @apply text-sm sm:text-base md:text-lg;
+    }
+
+    /* Philippine Peso currency styling */
+    .currency {
+        @apply font-semibold text-coffee-700;
+    }
+
+    .currency-large {
+        @apply text-xl font-bold text-coffee-800;
+    }
+
+    .currency-small {
+        @apply text-sm font-medium text-coffee-600;
+    }
+
+    /* Minimalist receipt styles */
+    .receipt-row {
+        @apply flex justify-between items-center text-sm;
+    }
+
+    .receipt-label {
+        @apply text-medium-gray font-light;
+    }
+
+    .receipt-value {
+        @apply text-dark-gray font-medium;
+    }
+
+    .receipt-item {
+        @apply border-b border-light-gray pb-3 mb-3;
+    }
+
+    .receipt-item-name {
+        @apply text-dark-gray font-medium mb-1;
+    }
+
+    .receipt-item-details {
+        @apply text-sm text-medium-gray font-light;
+    }
+
+    .receipt-item-addons {
+        @apply text-sm text-coffee-accent font-light;
+    }
+
+    .receipt-total {
+        @apply border-t-2 border-coffee-accent pt-4 mt-6;
+    }
+
+    .receipt-total-row {
+        @apply flex justify-between items-center text-lg font-medium text-dark-gray;
+    }
+
+    .receipt-footer {
+        @apply text-center border-t border-light-gray pt-6 mt-6;
+    }
+
+    .receipt-footer-text {
+        @apply text-xs text-medium-gray font-light mb-2;
+    }
+
+    /* Elegant animations */
+    .elegant-fade-in {
+        animation: elegantFadeIn 0.3s ease-out;
+    }
+
+    .elegant-slide-up {
+        animation: elegantSlideUp 0.4s ease-out;
+    }
+
+    @keyframes elegantFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes elegantSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.98);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    /* Sophisticated micro-animations */
+    .micro-bounce {
+        animation: microBounce 0.6s ease-out;
+    }
+
+    @keyframes microBounce {
+        0%,
+        20%,
+        50%,
+        80%,
+        100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-3px);
+        }
+        60% {
+            transform: translateY(-1px);
+        }
+    }
+
+    /* Premium hover states */
+    .premium-hover {
+        @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+    }
+
+    .premium-button-hover {
+        @apply transition-all duration-200 hover:shadow-md hover:scale-105 active:scale-95;
+    }
+
+    /* Premium typography classes */
+    .premium-title {
+        @apply font-premium font-light text-dark-gray tracking-wide;
+    }
+
+    .premium-subtitle {
+        @apply font-premium font-light text-medium-gray tracking-wide;
+    }
+
+    .premium-body {
+        @apply font-premium font-light text-dark-gray leading-relaxed;
+    }
+
+    .premium-caption {
+        @apply font-premium font-light text-medium-gray text-sm tracking-wide;
+    }
+
+    /* Premium spacing utilities */
+    .premium-section {
+        @apply py-16 px-6;
+    }
+
+    .premium-container {
+        @apply max-w-7xl mx-auto;
+    }
+
+    .premium-card {
+        @apply bg-primary-white rounded-lg shadow-sm border border-light-gray hover:shadow-md transition-all duration-300;
+    }
+
+    .premium-input {
+        @apply bg-primary-white border border-light-gray rounded-lg px-4 py-3 text-dark-gray placeholder-medium-gray focus:outline-none focus:ring-2 focus:ring-coffee-accent focus:border-transparent transition-all duration-200;
+    }
+
+    .premium-button {
+        @apply bg-coffee-accent text-primary-white px-6 py-3 rounded-lg font-medium tracking-wide hover:bg-dark-gray transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-coffee-accent focus:ring-offset-2;
+    }
+
+    .premium-button-outline {
+        @apply border border-coffee-accent text-coffee-accent px-6 py-3 rounded-lg font-medium tracking-wide hover:bg-coffee-accent hover:text-primary-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-coffee-accent focus:ring-offset-2;
+    }
+
+    .premium-button-ghost {
+        @apply text-coffee-accent px-6 py-3 rounded-lg font-medium tracking-wide hover:bg-light-gray transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-coffee-accent focus:ring-offset-2;
+    }
+
+    /* Premium text sizes with optimal spacing */
+    .text-premium-xs {
+        @apply text-xs font-light tracking-wider leading-relaxed;
+    }
+
+    .text-premium-sm {
+        @apply text-sm font-light tracking-wide leading-relaxed;
+    }
+
+    .text-premium-base {
+        @apply text-base font-light tracking-wide leading-relaxed;
+    }
+
+    .text-premium-lg {
+        @apply text-lg font-light tracking-wide leading-relaxed;
+    }
+
+    .text-premium-xl {
+        @apply text-xl font-light tracking-wide leading-relaxed;
+    }
+
+    .text-premium-2xl {
+        @apply text-2xl font-extralight tracking-wider leading-relaxed;
+    }
+
+    .text-premium-3xl {
+        @apply text-3xl font-extralight tracking-wider leading-relaxed;
+    }
+
+    /* Premium color combinations */
+    .text-premium-primary {
+        @apply text-dark-gray;
+    }
+
+    .text-premium-secondary {
+        @apply text-medium-gray;
+    }
+
+    .text-premium-accent {
+        @apply text-coffee-accent;
+    }
+
+    .text-premium-muted {
+        @apply text-medium-gray opacity-75;
+    }
+
+    /* Premium layout utilities */
+    .premium-grid {
+        @apply grid gap-8;
+    }
+
+    .premium-flex {
+        @apply flex items-center space-x-6;
+    }
+
+    .premium-stack {
+        @apply flex flex-col space-y-6;
+    }
+
+    /* Premium shadows with coffee tones */
+    .shadow-premium {
+        box-shadow: 0 1px 3px 0 rgba(139, 69, 19, 0.1),
+            0 1px 2px 0 rgba(139, 69, 19, 0.06);
+    }
+
+    .shadow-premium-md {
+        box-shadow: 0 4px 6px -1px rgba(139, 69, 19, 0.1),
+            0 2px 4px -1px rgba(139, 69, 19, 0.06);
+    }
+
+    .shadow-premium-lg {
+        box-shadow: 0 10px 15px -3px rgba(139, 69, 19, 0.1),
+            0 4px 6px -2px rgba(139, 69, 19, 0.05);
+    }
+
+    .shadow-premium-xl {
+        box-shadow: 0 20px 25px -5px rgba(139, 69, 19, 0.1),
+            0 10px 10px -5px rgba(139, 69, 19, 0.04);
+    }
+}
+
+@layer utilities {
+    .border-l-3 {
+        border-left-width: 3px;
+    }
+}

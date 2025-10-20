@@ -1,0 +1,41 @@
+# Product Images Directory
+
+This directory contains high-quality product images for menu items.
+
+## Image Guidelines
+- Format: JPG, PNG, or SVG
+- Recommended size: 800x800px (1:1 aspect ratio)
+- Naming convention: {menu-item-slug}.jpg (e.g., americano.jpg, latte.jpg)
+- Optimize images for web (compress without losing quality)
+- Use high-quality, professional product photography
+
+## Current Images
+- default-coffee.svg - Default placeholder for all items (currently in use)
+
+## Adding Product Images
+1. Take or source high-quality product photos
+2. Resize to 800x800px maintaining aspect ratio
+3. Optimize for web (aim for < 200KB per image)
+4. Name according to the menu item (lowercase, hyphenated)
+5. Place in this directory
+
+## Menu Items Needing Images
+Coffee:
+- americano.jpg
+- cappuccino.jpg
+- latte.jpg
+- mocha.jpg
+- macchiato.jpg
+- flat-white.jpg
+
+Non-Coffee:
+- hot-chocolate.jpg
+- chai-latte.jpg
+- matcha-latte.jpg
+- vanilla-milk-tea.jpg
+
+Fruit Sodas:
+- orange-soda.jpg
+- apple-soda.jpg
+- grape-soda.jpg
+- lemon-lime-soda.jpg

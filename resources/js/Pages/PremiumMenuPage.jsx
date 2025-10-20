@@ -1,0 +1,324 @@
+import { useState, useEffect, useRef } from "react";
+import MinimalistLayout from "@/Layouts/MinimalistLayout";
+import ProductCategoryGrid from "@/Components/Menu/ProductCategoryGrid";
+import LuxuryCartDrawer from "@/Components/Menu/LuxuryCartDrawer";
+import ElegantLoader from "@/Components/ElegantLoader";
+import { formatCurrency } from "@/Utils/currency";
+import axios from "axios";
+
+export default function PremiumMenuPage() {
+    const [categories, setCategories] = useState([]);
+    const [menuItems, setMenuItems] = useState({});
+    const [addons, setAddons] = useState([]);
+    const [cart, setCart] = useState([]);
+    const [isCartOpen, setIsCartOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [activeCategory, setActiveCategory] = useState(null);
+
+    // Refs for scroll handling
+    const categoryRefs = useRef({});
+
+    useEffect(() => {
+        fetchMenuData();
+    }, []);
+
+    const fetchMenuData = async () => {
+        try {
+            setLoading(true);
+            const response = await axios.get("/api/menu/complete");
+            const { categories, menu_items, addons } = response.data;
+
+            setCategories(categories);
+            setAddons(addons);
+
+            // Group menu items by category
+            const itemsByCategory = {};
+            menu_items.forEach((item) => {
+                if (!itemsByCategory[item.category_id]) {
+                    itemsByCategory[item.category_id] = [];
+                }
+                itemsByCategory[item.category_id].push(item);
+            });
+            setMenuItems(itemsByCategory);
+
+            // Set initial active category
+            if (categories.length > 0) {
+                setActiveCategory(categories[0].id);
+            }
+        } catch (error) {
+            console.error("Error fetching menu data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const addToCart = (item, size, variant, selectedAddons, quantity = 1) => {
+        const cartItem = {
+            id: Date.now(), // Temporary ID for cart management
+            menu_item_id: item.id,
+            name: item.name,
+            size,
+            variant,
+            quantity,
+            base_price: item.base_price,
+            unit_price: calculateItemPrice(item.base_price, size),
+            subtotal: calculateItemPrice(item.base_price, size) * quantity,
+            addons: selectedAddons.map((addon) => ({
+                id: addon.id,
+                name: addon.name,
+                price: addon.price,
+                quantity: 1,
+            })),
+        };
+
+        // Add addon costs to subtotal
+        const addonTotal = cartItem.addons.reduce(
+            (sum, addon) => sum + addon.price * addon.quantity,
+            0
+        );
+        cartItem.subtotal += addonTotal * quantity;
+
+        setCart((prevCart) => [...prevCart, cartItem]);
+    };
+
+    const calculateItemPrice = (basePrice, size) => {
+        const multiplier = size === "extra" ? 1.3 : 1.0;
+        return Math.round(basePrice * multiplier);
+    };
+
+    const removeFromCart = (cartItemId) => {
+        setCart((prevCart) =>
+            prevCart.filter((item) => item.id !== cartItemId)
+        );
+    };
+
+    const updateCartItemQuantity = (cartItemId, newQuantity) => {
+        if (newQuantity <= 0) {
+            removeFromCart(cartItemId);
+            return;
+        }
+
+        setCart((prevCart) =>
+            prevCart.map((item) => {
+                if (item.id === cartItemId) {
+                    const addonTotal = item.addons.reduce(
+                        (sum, addon) => sum + addon.price * addon.quantity,
+                        0
+                    );
+                    const subtotal =
+                        (item.unit_price + addonTotal) * newQuantity;
+                    return { ...item, quantity: newQuantity, subtotal };
+                }
+                return item;
+            })
+        );
+    };
+
+    const getCartTotal = () => {
+        return cart.reduce((total, item) => total + item.subtotal, 0);
+    };
+
+    const getCartItemCount = () => {
+        return cart.reduce((total, item) => total + item.quantity, 0);
+    };
+
+    const handleScroll = (e) => {
+        const container = e.target;
+        const { scrollTop } = container;
+
+        // Find the current visible category
+        for (const category of categories) {
+            const element = categoryRefs.current[category.id];
+            if (element) {
+                const { offsetTop, offsetHeight } = element;
+                if (
+                    scrollTop >= offsetTop - 100 &&
+                    scrollTop < offsetTop + offsetHeight - 100
+                ) {
+                    setActiveCategory(category.id);
+                    break;
+                }
+            }
+        }
+    };
+
+    const handleCategoryClick = (categoryId) => {
+        setActiveCategory(categoryId);
+        const element = categoryRefs.current[categoryId];
+        if (element) {
+            element.scrollIntoView({ behavior: "smooth" });
+        }
+    };
+
+    if (loading) {
+        return (
+            <MinimalistLayout title="Menu - KlaséCo">
+                <ElegantLoader />
+            </MinimalistLayout>
+        );
+    }
+
+    return (
+        <MinimalistLayout title="Menu - KlaséCo">
+            <div className="min-h-screen bg-primary-white">
+                {/* Premium Hero Section */}
+                <div className="bg-primary-white py-16 px-6">
+                    <div className="max-w-4xl mx-auto text-center">
+                        <h1 className="text-4xl md:text-5xl font-light text-dark-gray mb-4 tracking-wide">
+                            Curated Coffee Collection
+                        </h1>
+                        <p className="text-lg text-medium-gray font-light max-w-2xl mx-auto leading-relaxed">
+                            Discover our carefully selected premium coffee
+                            offerings, crafted with precision and served with
+                            elegance.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex">
+                    {/* Elegant Categories Navigation */}
+                    <div className="hidden lg:block w-80 bg-primary-white border-r border-light-gray sticky top-0 h-screen">
+                        <div className="p-8">
+                            <h2 className="text-xl font-light text-dark-gray mb-8 tracking-wide">
+                                Collections
+                            </h2>
+                            <div className="space-y-1">
+                                {categories.map((category) => (
+                                    <button
+                                        key={category.id}
+                                        onClick={() =>
+                                            handleCategoryClick(category.id)
+                                        }
+                                        className={`w-full text-left px-6 py-4 rounded-none transition-all duration-300 font-light tracking-wide ${
+                                            activeCategory === category.id
+                                                ? "text-coffee-accent border-l-2 border-coffee-accent bg-warm-white"
+                                                : "text-medium-gray hover:text-dark-gray hover:bg-warm-white"
+                                        }`}
+                                    >
+                                        {category.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Premium Menu Content */}
+                    <div
+                        className="flex-1 max-h-screen overflow-y-auto"
+                        onScroll={handleScroll}
+                    >
+                        {/* Mobile Categories */}
+                        <div className="lg:hidden bg-primary-white border-b border-light-gray sticky top-0 z-30">
+                            <div className="overflow-x-auto">
+                                <div className="flex px-6 py-4 space-x-8">
+                                    {categories.map((category) => (
+                                        <button
+                                            key={category.id}
+                                            onClick={() =>
+                                                handleCategoryClick(category.id)
+                                            }
+                                            className={`whitespace-nowrap font-light tracking-wide transition-all duration-300 ${
+                                                activeCategory === category.id
+                                                    ? "text-coffee-accent border-b-2 border-coffee-accent pb-2"
+                                                    : "text-medium-gray hover:text-dark-gray"
+                                            }`}
+                                        >
+                                            {category.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Premium Product Sections */}
+                        <div className="pb-32">
+                            {categories.map((category) => (
+                                <div
+                                    key={category.id}
+                                    ref={(el) =>
+                                        (categoryRefs.current[category.id] = el)
+                                    }
+                                >
+                                    <ProductCategoryGrid
+                                        category={category}
+                                        items={menuItems[category.id] || []}
+                                        addons={addons}
+                                        onAddToCart={addToCart}
+                                    />
+                                </div>
+                            ))}
+
+                            {/* Elegant Empty State */}
+                            {categories.length === 0 && (
+                                <div className="text-center py-24">
+                                    <div className="w-16 h-16 mx-auto mb-8 bg-light-gray rounded-full flex items-center justify-center">
+                                        <span className="text-2xl text-medium-gray">
+                                            ☕
+                                        </span>
+                                    </div>
+                                    <h3 className="text-2xl font-light text-dark-gray mb-4 tracking-wide">
+                                        Collection Coming Soon
+                                    </h3>
+                                    <p className="text-medium-gray font-light max-w-md mx-auto">
+                                        We're curating something extraordinary
+                                        for your coffee experience.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Premium Cart Experience */}
+                    {cart.length > 0 && (
+                        <>
+                            {/* Mobile Cart Button */}
+                            <div className="lg:hidden fixed bottom-0 left-0 right-0 p-6 bg-primary-white border-t border-light-gray">
+                                <button
+                                    onClick={() => setIsCartOpen(true)}
+                                    className="w-full bg-dark-gray text-primary-white py-4 px-6 rounded-none font-light tracking-wide flex items-center justify-between transition-all duration-300 hover:bg-coffee-accent"
+                                >
+                                    <span className="flex items-center space-x-3">
+                                        <span className="bg-coffee-accent text-primary-white px-3 py-1 rounded-full text-sm">
+                                            {getCartItemCount()}
+                                        </span>
+                                        <span>View Selection</span>
+                                    </span>
+                                    <span className="font-normal">
+                                        {formatCurrency(getCartTotal())}
+                                    </span>
+                                </button>
+                            </div>
+
+                            {/* Desktop Cart Sidebar */}
+                            <div className="hidden lg:block w-96">
+                                <div className="fixed w-96 right-0 top-0 h-screen bg-primary-white border-l border-light-gray">
+                                    <LuxuryCartDrawer
+                                        isOpen={true}
+                                        onClose={() => {}}
+                                        cart={cart}
+                                        onRemoveItem={removeFromCart}
+                                        onUpdateQuantity={
+                                            updateCartItemQuantity
+                                        }
+                                        total={getCartTotal()}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Mobile Cart Drawer */}
+                            <LuxuryCartDrawer
+                                isOpen={isCartOpen}
+                                onClose={() => setIsCartOpen(false)}
+                                cart={cart}
+                                onRemoveItem={removeFromCart}
+                                onUpdateQuantity={updateCartItemQuantity}
+                                total={getCartTotal()}
+                                isMobile={true}
+                            />
+                        </>
+                    )}
+                </div>
+            </div>
+        </MinimalistLayout>
+    );
+}

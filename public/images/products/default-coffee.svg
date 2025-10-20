@@ -1,0 +1,16 @@
+<svg width="800" height="800" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="800" fill="#fefefe"/>
+  <g transform="translate(400, 400)">
+    <!-- Coffee cup -->
+    <path d="M -120 -80 L -100 80 L 100 80 L 120 -80 Z" fill="#8b4513" opacity="0.1"/>
+    <ellipse cx="0" cy="-80" rx="120" ry="30" fill="#8b4513" opacity="0.15"/>
+    
+    <!-- Steam -->
+    <path d="M -40 -100 Q -50 -140 -40 -160" stroke="#8b4513" stroke-width="3" fill="none" opacity="0.3" stroke-linecap="round"/>
+    <path d="M 0 -110 Q -10 -150 0 -170" stroke="#8b4513" stroke-width="3" fill="none" opacity="0.3" stroke-linecap="round"/>
+    <path d="M 40 -100 Q 50 -140 40 -160" stroke="#8b4513" stroke-width="3" fill="none" opacity="0.3" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Elegant text -->
+  <text x="400" y="650" font-family="Arial, sans-serif" font-size="24" fill="#6c757d" text-anchor="middle" font-weight="300">Premium Coffee</text>
+</svg>
