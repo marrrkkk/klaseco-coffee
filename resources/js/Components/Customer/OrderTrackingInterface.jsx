@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     CheckCircleIcon,
     ClockIcon,
@@ -19,13 +19,26 @@ export default function OrderTrackingInterface() {
     const [showReceipt, setShowReceipt] = useState(false);
     const [statusAnimation, setStatusAnimation] = useState("");
 
+    // Auto-load order from URL parameter
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderParam = urlParams.get("order");
+        if (orderParam) {
+            setOrderNumber(orderParam);
+            // Auto-track the order after component mounts
+            setTimeout(() => {
+                trackOrderById(orderParam);
+            }, 100);
+        }
+    }, []);
+
     // Simple order status check without complex polling
     const currentOrderStatus = orderStatus;
     const currentError = error;
     const currentLoading = loading;
 
-    const handleTrackOrder = async () => {
-        if (!orderNumber.trim()) {
+    const trackOrderById = async (orderId) => {
+        if (!orderId || !orderId.trim()) {
             setError("Please enter an order number");
             return;
         }
@@ -34,7 +47,7 @@ export default function OrderTrackingInterface() {
         setError("");
 
         try {
-            const response = await axios.get(`/api/orders/${orderNumber}/status`);
+            const response = await axios.get(`/api/orders/${orderId}/status`);
             const data = response.data;
             const orderData = data.order || data;
 
@@ -43,7 +56,7 @@ export default function OrderTrackingInterface() {
 
             // Start simple polling for status updates
             if (!["served", "cancelled"].includes(orderData.status)) {
-                startSimplePolling(orderNumber);
+                startSimplePolling(orderId);
             }
         } catch (err) {
             setError("Order not found. Please check your order number.");
@@ -54,11 +67,17 @@ export default function OrderTrackingInterface() {
         }
     };
 
+    const handleTrackOrder = async () => {
+        trackOrderById(orderNumber);
+    };
+
     // Simple polling without complex context
     const startSimplePolling = (orderId) => {
         const pollInterval = setInterval(async () => {
             try {
-                const response = await axios.get(`/api/orders/${orderId}/status`);
+                const response = await axios.get(
+                    `/api/orders/${orderId}/status`
+                );
                 const data = response.data;
                 const orderData = data.order || data;
 

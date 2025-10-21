@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
 use App\Models\Order;
+use App\Models\User;
+use App\Enums\UserRole;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +21,7 @@ class OrderController extends Controller
   {
     $validated = $request->validate([
       'customer_name' => 'required|string|max:255',
-      'customer_phone' => 'required|string|max:20',
+      'customer_phone' => 'nullable|string|max:20',
       'items' => 'required|array|min:1',
       'items.*.menu_item_id' => 'required|exists:menu_items,id',
       'items.*.quantity' => 'required|integer|min:1',
@@ -125,7 +127,12 @@ class OrderController extends Controller
       ->get();
 
     return response()->json([
-      'orders' => $orders->map(fn($order) => $this->formatOrderResponse($order)),
+      'success' => true,
+      'data' => $orders->map(fn($order) => $this->formatOrderResponse($order)),
+      'meta' => [
+        'count' => $orders->count(),
+        'timestamp' => now()->toISOString(),
+      ],
     ]);
   }
 
@@ -141,7 +148,12 @@ class OrderController extends Controller
       ->get();
 
     return response()->json([
-      'orders' => $orders->map(fn($order) => $this->formatOrderResponse($order)),
+      'success' => true,
+      'data' => $orders->map(fn($order) => $this->formatOrderResponse($order)),
+      'meta' => [
+        'count' => $orders->count(),
+        'timestamp' => now()->toISOString(),
+      ],
     ]);
   }
 
@@ -156,7 +168,12 @@ class OrderController extends Controller
       ->get();
 
     return response()->json([
-      'orders' => $orders->map(fn($order) => $this->formatOrderResponse($order)),
+      'success' => true,
+      'data' => $orders->map(fn($order) => $this->formatOrderResponse($order)),
+      'meta' => [
+        'count' => $orders->count(),
+        'timestamp' => now()->toISOString(),
+      ],
     ]);
   }
 
@@ -187,9 +204,46 @@ class OrderController extends Controller
   public function getQueueStats(): JsonResponse
   {
     return response()->json([
-      'pending_count' => Order::where('status', OrderStatus::PENDING)->count(),
-      'active_count' => Order::whereIn('status', [OrderStatus::ACCEPTED, OrderStatus::PREPARING])->count(),
-      'ready_count' => Order::where('status', OrderStatus::READY)->count(),
+      'success' => true,
+      'data' => [
+        'pending_count' => Order::where('status', OrderStatus::PENDING)->count(),
+        'accepted_count' => Order::where('status', OrderStatus::ACCEPTED)->count(),
+        'preparing_count' => Order::where('status', OrderStatus::PREPARING)->count(),
+        'active_count' => Order::whereIn('status', [OrderStatus::ACCEPTED, OrderStatus::PREPARING])->count(),
+        'ready_count' => Order::where('status', OrderStatus::READY)->count(),
+        'served_count' => Order::where('status', OrderStatus::SERVED)->count(),
+        'cancelled_count' => Order::where('status', OrderStatus::CANCELLED)->count(),
+      ],
+      'meta' => [
+        'timestamp' => now()->toISOString(),
+      ],
+    ]);
+  }
+
+  /**
+   * Get order history (all non-pending orders).
+   */
+  public function getOrderHistory(): JsonResponse
+  {
+    $orders = Order::whereIn('status', [
+      OrderStatus::ACCEPTED,
+      OrderStatus::PREPARING,
+      OrderStatus::READY,
+      OrderStatus::SERVED,
+      OrderStatus::CANCELLED
+    ])
+      ->with(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier', 'owner'])
+      ->orderBy('updated_at', 'desc')
+      ->limit(50) // Limit to last 50 orders
+      ->get();
+
+    return response()->json([
+      'success' => true,
+      'data' => $orders->map(fn($order) => $this->formatOrderResponse($order)),
+      'meta' => [
+        'count' => $orders->count(),
+        'timestamp' => now()->toISOString(),
+      ],
     ]);
   }
 
@@ -228,18 +282,40 @@ class OrderController extends Controller
    */
   public function acceptOrder(Request $request, Order $order): JsonResponse
   {
+    // Check if order exists
+    if (!$order) {
+      Log::error('Order not found for acceptance', [
+        'order_id' => $request->route('order'),
+      ]);
+
+      return response()->json([
+        'success' => false,
+        'message' => 'Order not found',
+      ], 404);
+    }
+
     if ($order->status !== OrderStatus::PENDING) {
       return response()->json([
+        'success' => false,
         'message' => 'Order cannot be accepted in current status',
       ], 400);
     }
 
+    // Get a valid cashier ID - either from authenticated user or find first cashier
+    $cashierId = $request->user()?->id;
+    if (!$cashierId) {
+      // Find the first cashier user if no authenticated user
+      $cashier = User::where('role', UserRole::CASHIER)->first();
+      $cashierId = $cashier?->id;
+    }
+
     $order->update([
       'status' => OrderStatus::ACCEPTED,
-      'cashier_id' => $request->user()?->id,
+      'cashier_id' => $cashierId,
     ]);
 
     return response()->json([
+      'success' => true,
       'message' => 'Order accepted successfully',
       'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier'])),
       'status_display' => $this->getElegantStatusDisplay($order->status),
@@ -251,18 +327,60 @@ class OrderController extends Controller
    */
   public function rejectOrder(Request $request, Order $order): JsonResponse
   {
-    if ($order->status !== OrderStatus::PENDING) {
+    // Check if order exists
+    if (!$order) {
+      Log::error('Order not found for rejection', [
+        'order_id' => $request->route('order'),
+      ]);
+
       return response()->json([
+        'success' => false,
+        'message' => 'Order not found',
+      ], 404);
+    }
+
+    // Log the current order status for debugging
+    Log::info('Reject order attempt', [
+      'order_id' => $order->id,
+      'current_status' => $order->status->value,
+      'user_id' => $request->user()?->id,
+    ]);
+
+    if ($order->status !== OrderStatus::PENDING) {
+      Log::warning('Order rejection failed - wrong status', [
+        'order_id' => $order->id,
+        'current_status' => $order->status->value,
+        'expected_status' => OrderStatus::PENDING->value,
+      ]);
+
+      return response()->json([
+        'success' => false,
         'message' => 'Order cannot be rejected in current status',
+        'current_status' => $order->status->value,
+        'order_id' => $order->id,
       ], 400);
+    }
+
+    // Get a valid cashier ID - either from authenticated user or find first cashier
+    $cashierId = $request->user()?->id;
+    if (!$cashierId) {
+      // Find the first cashier user if no authenticated user
+      $cashier = User::where('role', UserRole::CASHIER)->first();
+      $cashierId = $cashier?->id;
     }
 
     $order->update([
       'status' => OrderStatus::CANCELLED,
+      'cashier_id' => $cashierId,
+    ]);
+
+    Log::info('Order rejected successfully', [
+      'order_id' => $order->id,
       'cashier_id' => $request->user()?->id,
     ]);
 
     return response()->json([
+      'success' => true,
       'message' => 'Order rejected successfully',
       'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier'])),
       'status_display' => $this->getElegantStatusDisplay($order->status),
@@ -276,6 +394,7 @@ class OrderController extends Controller
   {
     if (!in_array($order->status, [OrderStatus::ACCEPTED, OrderStatus::PREPARING])) {
       return response()->json([
+        'success' => false,
         'message' => 'Order cannot be marked as ready in current status',
       ], 400);
     }
@@ -286,6 +405,7 @@ class OrderController extends Controller
     ]);
 
     return response()->json([
+      'success' => true,
       'message' => 'Order marked as ready successfully',
       'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier', 'owner'])),
       'status_display' => $this->getElegantStatusDisplay($order->status),

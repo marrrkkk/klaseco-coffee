@@ -506,6 +506,8 @@ export const SeamlessPollingProvider = ({ children }) => {
                     if (shouldSkip) return;
                 }
 
+                let timeoutId = null; // Declare outside try block
+
                 try {
                     requestState.inProgress = true;
                     requestState.lastRequestTime = Date.now();
@@ -519,7 +521,7 @@ export const SeamlessPollingProvider = ({ children }) => {
                         stateRef.current.connectionQuality === "poor"
                             ? 15000
                             : 10000;
-                    const timeoutId = setTimeout(() => {
+                    timeoutId = setTimeout(() => {
                         if (abortControllers.current[key]) {
                             abortControllers.current[key].abort();
                         }
@@ -630,7 +632,7 @@ export const SeamlessPollingProvider = ({ children }) => {
                         });
                     }
                 } catch (error) {
-                    clearTimeout(timeoutId);
+                    if (timeoutId) clearTimeout(timeoutId);
 
                     // Don't handle aborted requests as errors
                     if (error.name === "AbortError") {

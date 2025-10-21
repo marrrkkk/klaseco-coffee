@@ -1,169 +1,169 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Head } from "@inertiajs/react";
-import StaffLayout from "@/Layouts/StaffLayout";
-import OrderQueueList from "@/Components/Cashier/OrderQueueList";
-import OrderSummaryCard from "@/Components/Cashier/OrderSummaryCard";
+import MinimalistLayout from "@/Layouts/MinimalistLayout";
 import { useSeamlessSmartPolling } from "@/Hooks/useSeamlessPolling";
-import { useCustomerCartPolling } from "@/Hooks/useCustomerCartPolling";
-import ElegantErrorState, {
-    ConnectionQualityIndicator,
-    GracefulDegradationNotice,
-} from "@/Components/ElegantErrorState";
-import { OrderListTransition } from "@/Components/SmoothTransition";
-import ActiveCustomerCarts from "@/Components/Cashier/ActiveCustomerCarts";
 import { formatCurrency } from "@/Utils/currency";
-import { useNotify } from "@/Hooks/useNotify";
+import { ClockIcon, CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 export default function CashierDashboard() {
-    const [selectedOrder, setSelectedOrder] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [lastUpdated, setLastUpdated] = useState(null);
-    const notify = useNotify();
+    const [processingOrders, setProcessingOrders] = useState(new Set());
+    const [selectedOrder, setSelectedOrder] = useState(null);
+    const [activeTab, setActiveTab] = useState("pending"); // "pending" or "history"
+    const [historyOrders, setHistoryOrders] = useState([]);
 
-    // Use smart polling for cashier orders
     const handleOrdersUpdate = useCallback((ordersData, meta) => {
         setLastUpdated(new Date());
     }, []);
 
-    const {
-        orders,
-        queueStats,
-        isLoading,
-        error,
-        isTransitioning,
-        connectionQuality,
-        gracefulDegradation,
-        hasActiveOrders,
-    } = useSeamlessSmartPolling("cashier", handleOrdersUpdate, {
-        priority: "high",
-        smoothTransitions: true,
-    });
+    // Fetch history orders
+    const fetchHistory = useCallback(async () => {
+        try {
+            const response = await fetch("/api/orders/stats");
+            const data = await response.json();
 
-    const handleViewDetails = (order) => {
-        setSelectedOrder(order);
-        setIsModalOpen(true);
-    };
-
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        setSelectedOrder(null);
-    };
-
-    // Track active customer carts
-    const { activeCarts, isLoading: cartsLoading } = useCustomerCartPolling(
-        (carts) => {
-            console.log("Active carts updated:", carts);
+            // Fetch all non-pending orders
+            const historyResponse = await fetch("/api/orders/history");
+            if (historyResponse.ok) {
+                const historyData = await historyResponse.json();
+                setHistoryOrders(historyData.data || []);
+            }
+        } catch (err) {
+            console.error("Error fetching history:", err);
         }
-    );
+    }, []);
 
-    const handleAcceptOrder = useCallback(
-        async (orderId) => {
-            try {
-                const response = await fetch(`/api/orders/${orderId}/accept`, {
-                    method: "PATCH",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": document
-                            .querySelector('meta[name="csrf-token"]')
-                            ?.getAttribute("content"),
-                    },
-                    body: JSON.stringify({
-                        cashier_id: 2, // Using cashier user ID from seeder
-                    }),
-                });
+    // Load history when switching to history tab
+    useEffect(() => {
+        if (activeTab === "history") {
+            fetchHistory();
+        }
+    }, [activeTab, fetchHistory]);
 
-                const data = await response.json();
-
-                if (data.success) {
-                    notify.orderAccepted(data.order?.id || "Unknown");
-                    // The polling will automatically update the orders list
-                } else {
-                    notify.error(data.message || "Failed to accept order");
-                }
-            } catch (err) {
-                console.error("Network error occurred:", err);
-                notify.networkError();
-            }
-        },
-        [notify]
-    );
-
-    const handleRejectOrder = useCallback(
-        async (orderId) => {
-            try {
-                const response = await fetch(`/api/orders/${orderId}/reject`, {
-                    method: "PATCH",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": document
-                            .querySelector('meta[name="csrf-token"]')
-                            ?.getAttribute("content"),
-                    },
-                    body: JSON.stringify({
-                        cashier_id: 2, // Using cashier user ID from seeder
-                    }),
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    notify.orderRejected(data.order?.id || "Unknown");
-                    // The polling will automatically update the orders list
-                } else {
-                    notify.error(data.message || "Failed to reject order");
-                }
-            } catch (err) {
-                console.error("Network error occurred:", err);
-                notify.networkError();
-            }
-        },
-        [notify]
-    );
-
-    const formatLastUpdated = (date) => {
-        if (!date) return "";
-        return date.toLocaleTimeString("en-PH", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
+    const { orders, isLoading, error, connectionQuality } =
+        useSeamlessSmartPolling("cashier", handleOrdersUpdate, {
+            priority: "high",
+            smoothTransitions: true,
         });
+
+    const handleAcceptOrder = useCallback(async (orderId) => {
+        setProcessingOrders((prev) => new Set(prev).add(orderId));
+
+        try {
+            const response = await fetch(`/api/orders/${orderId}/accept`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document
+                        .querySelector('meta[name="csrf-token"]')
+                        ?.getAttribute("content"),
+                },
+                body: JSON.stringify({
+                    cashier_id: 2,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                console.error("Failed to accept order:", data.message);
+            }
+        } catch (err) {
+            console.error("Network error occurred:", err);
+        } finally {
+            setProcessingOrders((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(orderId);
+                return newSet;
+            });
+        }
+    }, []);
+
+    const handleRejectOrder = useCallback(async (orderId) => {
+        setProcessingOrders((prev) => new Set(prev).add(orderId));
+
+        try {
+            const response = await fetch(`/api/orders/${orderId}/reject`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document
+                        .querySelector('meta[name="csrf-token"]')
+                        ?.getAttribute("content"),
+                },
+                body: JSON.stringify({
+                    cashier_id: 2,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                console.error("Failed to reject order:", data.message);
+            }
+        } catch (err) {
+            console.error("Network error occurred:", err);
+        } finally {
+            setProcessingOrders((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(orderId);
+                return newSet;
+            });
+        }
+    }, []);
+
+    const getTimeAgo = (dateString) => {
+        const now = new Date();
+        const orderTime = new Date(dateString);
+        const diffInMinutes = Math.floor((now - orderTime) / (1000 * 60));
+
+        if (diffInMinutes < 1) return "Just now";
+        if (diffInMinutes === 1) return "1 min ago";
+        if (diffInMinutes < 60) return `${diffInMinutes} mins ago`;
+
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours === 1) return "1 hour ago";
+        return `${diffInHours} hours ago`;
     };
 
     return (
-        <StaffLayout role="Cashier">
+        <MinimalistLayout title="Cashier Dashboard">
             <Head title="Cashier - KlaséCo" />
 
-            <div className="min-h-screen bg-white">
-                {/* Clean Header */}
-                <div className="border-b border-gray-100 bg-white">
-                    <div className="px-6 py-4">
-                        <div className="flex items-center justify-between">
+            <div className="min-h-screen bg-primary-white">
+                {/* Header */}
+                <div className="sticky top-0 z-10 bg-primary-white border-b border-light-gray">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+                        <div className="flex items-center justify-between mb-4">
                             <div>
-                                <h1 className="text-2xl font-semibold text-gray-900">
-                                    Cashier
+                                <h1 className="text-xl sm:text-2xl font-light text-dark-gray">
+                                    Cashier Dashboard
                                 </h1>
-                                <p className="text-sm text-gray-500 mt-1">
-                                    Process orders efficiently
+                                <p className="text-sm text-medium-gray mt-1">
+                                    Review and accept orders
                                 </p>
                             </div>
-                            <div className="flex items-center space-x-6">
-                                <div className="text-right">
-                                    <div className="text-2xl font-bold text-gray-900">
+                            <div className="flex items-center space-x-4">
+                                <a
+                                    href="/barista"
+                                    className="px-4 py-2 text-sm font-medium text-coffee-accent border border-coffee-accent rounded-lg hover:bg-coffee-accent hover:text-white transition-all"
+                                >
+                                    <span className="hidden sm:inline">
+                                        Switch to{" "}
+                                    </span>
+                                    Barista
+                                </a>
+                                <div className="text-right hidden sm:block">
+                                    <div className="text-2xl font-light text-dark-gray">
                                         {orders.length}
                                     </div>
-                                    <div className="text-xs text-gray-500">
+                                    <div className="text-xs text-medium-gray">
                                         Pending
                                     </div>
                                 </div>
-                                <ConnectionQualityIndicator
-                                    quality={connectionQuality}
-                                    className="hidden sm:flex"
-                                />
                                 <div
-                                    className={`h-2 w-2 rounded-full ${
-                                        isTransitioning
-                                            ? "bg-blue-500 animate-pulse"
-                                            : connectionQuality === "excellent"
+                                    className={`w-2 h-2 rounded-full ${
+                                        connectionQuality === "excellent"
                                             ? "bg-green-500"
                                             : connectionQuality === "good"
                                             ? "bg-blue-500"
@@ -177,97 +177,313 @@ export default function CashierDashboard() {
                     </div>
                 </div>
 
-                {/* Elegant Error State */}
-                {error && (
-                    <div className="mx-6 mt-4">
-                        <ElegantErrorState
-                            error={error}
-                            onRetry={() => window.location.reload()}
-                            size="medium"
-                        />
-                    </div>
-                )}
-
-                {/* Graceful Degradation Notice */}
-                <GracefulDegradationNotice
-                    isActive={gracefulDegradation}
-                    className="mx-6 mt-4"
-                />
-
-                {/* Main Content with Smooth Transitions */}
-                <div className="p-6">
-                    <OrderListTransition
-                        orders={orders}
-                        isTransitioning={isTransitioning}
-                        renderOrder={(order) => (
-                            <div
-                                key={order.id}
-                                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h3 className="font-medium text-gray-900">
-                                            {order.customer_name}
-                                        </h3>
-                                        <p className="text-sm text-gray-500">
-                                            {formatCurrency(order.total_amount)}
+                {/* Content */}
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+                    {activeTab === "pending" ? (
+                        <>
+                            {isLoading && orders.length === 0 ? (
+                                <div className="flex items-center justify-center h-64">
+                                    <div className="text-center">
+                                        <div className="w-12 h-12 border-2 border-coffee-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                                        <p className="text-medium-gray">
+                                            Loading orders...
                                         </p>
                                     </div>
-                                    <div className="flex space-x-2">
-                                        <button
-                                            onClick={() =>
-                                                handleViewDetails(order)
-                                            }
-                                            className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                                        >
-                                            View
-                                        </button>
-                                        <button
-                                            onClick={() =>
-                                                handleAcceptOrder(order.id)
-                                            }
-                                            className="px-3 py-1 text-sm bg-green-600 text-white hover:bg-green-700 rounded-md transition-colors"
-                                        >
-                                            Accept
-                                        </button>
-                                        <button
-                                            onClick={() =>
-                                                handleRejectOrder(order.id)
-                                            }
-                                            className="px-3 py-1 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md transition-colors"
-                                        >
-                                            Reject
-                                        </button>
+                                </div>
+                            ) : orders.length === 0 ? (
+                                <div className="flex items-center justify-center h-64">
+                                    <div className="text-center">
+                                        <div className="w-16 h-16 bg-light-gray rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <CheckIcon className="w-8 h-8 text-medium-gray" />
+                                        </div>
+                                        <h3 className="text-xl font-light text-dark-gray mb-2">
+                                            All Caught Up!
+                                        </h3>
+                                        <p className="text-medium-gray">
+                                            No pending orders
+                                        </p>
                                     </div>
                                 </div>
-                            </div>
-                        )}
-                        className="space-y-4"
-                    />
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                                    {orders.map((order) => (
+                                        <div
+                                            key={order.id}
+                                            className="bg-white border border-light-gray rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
+                                        >
+                                            {/* Order Header */}
+                                            <div className="px-4 sm:px-6 py-4 border-b border-light-gray bg-warm-white">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h3 className="text-lg font-medium text-dark-gray">
+                                                        Order #{order.id}
+                                                    </h3>
+                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                                        Pending
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center space-x-2 text-sm text-medium-gray">
+                                                    <ClockIcon className="h-4 w-4" />
+                                                    <span>
+                                                        {getTimeAgo(
+                                                            order.created_at
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            </div>
 
-                    {/* Fallback for when transitions are disabled */}
-                    {!isTransitioning && (
-                        <OrderQueueList
-                            orders={orders}
-                            onViewDetails={handleViewDetails}
-                            onAcceptOrder={handleAcceptOrder}
-                            onRejectOrder={handleRejectOrder}
-                            isLoading={isLoading}
-                        />
+                                            {/* Order Content */}
+                                            <div className="px-4 sm:px-6 py-4">
+                                                {/* Customer Name */}
+                                                <div className="mb-4">
+                                                    <p className="text-sm font-medium text-dark-gray">
+                                                        {order.customer_name}
+                                                    </p>
+                                                </div>
+
+                                                {/* Order Items */}
+                                                <div className="mb-4">
+                                                    <h4 className="text-xs font-medium text-medium-gray mb-3 uppercase tracking-wide">
+                                                        Items
+                                                    </h4>
+                                                    <div className="space-y-3">
+                                                        {order.items?.map(
+                                                            (item, index) => (
+                                                                <div
+                                                                    key={index}
+                                                                    className="border-l-2 border-coffee-accent pl-3 py-2 bg-warm-white rounded-r"
+                                                                >
+                                                                    <div className="flex items-center justify-between mb-1">
+                                                                        <span className="font-medium text-dark-gray text-sm">
+                                                                            {
+                                                                                item.quantity
+                                                                            }
+                                                                            x{" "}
+                                                                            {
+                                                                                item
+                                                                                    .menu_item
+                                                                                    ?.name
+                                                                            }
+                                                                        </span>
+                                                                        <span className="text-sm text-medium-gray">
+                                                                            {formatCurrency(
+                                                                                item.subtotal
+                                                                            )}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="text-xs text-medium-gray">
+                                                                        <span className="font-medium">
+                                                                            {item.size ===
+                                                                            "daily"
+                                                                                ? "Daily"
+                                                                                : "Extra"}
+                                                                        </span>
+                                                                        {" • "}
+                                                                        {item.variant ===
+                                                                        "hot"
+                                                                            ? "Hot"
+                                                                            : "Cold"}
+                                                                    </div>
+                                                                    {item.addons &&
+                                                                        item
+                                                                            .addons
+                                                                            .length >
+                                                                            0 && (
+                                                                            <div className="text-xs text-coffee-accent mt-1">
+                                                                                +{" "}
+                                                                                {item.addons
+                                                                                    .map(
+                                                                                        (
+                                                                                            addon
+                                                                                        ) =>
+                                                                                            addon.name
+                                                                                    )
+                                                                                    .join(
+                                                                                        ", "
+                                                                                    )}
+                                                                            </div>
+                                                                        )}
+                                                                </div>
+                                                            )
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Total */}
+                                                <div className="mb-4 p-3 bg-warm-white rounded-lg">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm font-medium text-medium-gray">
+                                                            Total Amount
+                                                        </span>
+                                                        <span className="text-lg font-medium text-dark-gray">
+                                                            {formatCurrency(
+                                                                order.total_amount
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Action Buttons */}
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <button
+                                                        onClick={() =>
+                                                            handleRejectOrder(
+                                                                order.id
+                                                            )
+                                                        }
+                                                        disabled={processingOrders.has(
+                                                            order.id
+                                                        )}
+                                                        className="py-3 px-4 border-2 border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        {processingOrders.has(
+                                                            order.id
+                                                        ) ? (
+                                                            <span className="flex items-center justify-center">
+                                                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                                                            </span>
+                                                        ) : (
+                                                            <span className="flex items-center justify-center space-x-1">
+                                                                <XMarkIcon className="w-5 h-5" />
+                                                                <span className="hidden sm:inline">
+                                                                    Reject
+                                                                </span>
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        onClick={() =>
+                                                            handleAcceptOrder(
+                                                                order.id
+                                                            )
+                                                        }
+                                                        disabled={processingOrders.has(
+                                                            order.id
+                                                        )}
+                                                        className="py-3 px-4 bg-coffee-accent text-white rounded-lg font-medium hover:bg-opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        {processingOrders.has(
+                                                            order.id
+                                                        ) ? (
+                                                            <span className="flex items-center justify-center">
+                                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                            </span>
+                                                        ) : (
+                                                            <span className="flex items-center justify-center space-x-1">
+                                                                <CheckIcon className="w-5 h-5" />
+                                                                <span className="hidden sm:inline">
+                                                                    Accept
+                                                                </span>
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        /* History Tab */
+                        <div>
+                            <div className="mb-4">
+                                <h2 className="text-lg font-light text-dark-gray">
+                                    Order History
+                                </h2>
+                                <p className="text-sm text-medium-gray">
+                                    All accepted and rejected orders
+                                </p>
+                            </div>
+
+                            {historyOrders.length === 0 ? (
+                                <div className="flex items-center justify-center h-64">
+                                    <div className="text-center">
+                                        <div className="w-16 h-16 bg-light-gray rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <ClockIcon className="w-8 h-8 text-medium-gray" />
+                                        </div>
+                                        <h3 className="text-xl font-light text-dark-gray mb-2">
+                                            No History Yet
+                                        </h3>
+                                        <p className="text-medium-gray">
+                                            Accepted and rejected orders will
+                                            appear here
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {historyOrders.map((order) => (
+                                        <div
+                                            key={order.id}
+                                            className="bg-white border border-light-gray rounded-lg p-4 hover:shadow-md transition-shadow"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center space-x-3 mb-2">
+                                                        <h3 className="font-medium text-dark-gray">
+                                                            Order #{order.id}
+                                                        </h3>
+                                                        <span
+                                                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                                                order.status ===
+                                                                "cancelled"
+                                                                    ? "bg-red-50 text-red-700 border border-red-200"
+                                                                    : order.status ===
+                                                                      "accepted"
+                                                                    ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                                                    : order.status ===
+                                                                      "preparing"
+                                                                    ? "bg-orange-50 text-orange-700 border border-orange-200"
+                                                                    : order.status ===
+                                                                      "ready"
+                                                                    ? "bg-green-50 text-green-700 border border-green-200"
+                                                                    : "bg-gray-50 text-gray-700 border border-gray-200"
+                                                            }`}
+                                                        >
+                                                            {order.status ===
+                                                            "cancelled"
+                                                                ? "Rejected"
+                                                                : order.status ===
+                                                                  "accepted"
+                                                                ? "Accepted"
+                                                                : order.status ===
+                                                                  "preparing"
+                                                                ? "Preparing"
+                                                                : order.status ===
+                                                                  "ready"
+                                                                ? "Ready"
+                                                                : "Served"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-sm text-medium-gray">
+                                                        {order.customer_name} •{" "}
+                                                        {formatCurrency(
+                                                            order.total_amount
+                                                        )}
+                                                    </div>
+                                                    <div className="text-xs text-medium-gray mt-1">
+                                                        {new Date(
+                                                            order.created_at
+                                                        ).toLocaleString(
+                                                            "en-PH",
+                                                            {
+                                                                month: "short",
+                                                                day: "numeric",
+                                                                hour: "2-digit",
+                                                                minute: "2-digit",
+                                                            }
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
-
-                {/* Order Summary Card */}
-                {selectedOrder && (
-                    <OrderSummaryCard
-                        order={selectedOrder}
-                        isOpen={isModalOpen}
-                        onClose={handleCloseModal}
-                        onAccept={handleAcceptOrder}
-                        onReject={handleRejectOrder}
-                    />
-                )}
             </div>
-        </StaffLayout>
+        </MinimalistLayout>
     );
 }

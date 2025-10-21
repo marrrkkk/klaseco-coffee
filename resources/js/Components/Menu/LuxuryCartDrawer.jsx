@@ -13,7 +13,6 @@ export default function LuxuryCartDrawer({
     isMobile = false,
 }) {
     const [customerName, setCustomerName] = useState("");
-    const [customerPhone, setCustomerPhone] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
     const [orderNumber, setOrderNumber] = useState(null);
@@ -66,32 +65,17 @@ export default function LuxuryCartDrawer({
             newErrors.customerName = "Name must be at least 2 characters";
         }
 
-        if (!customerPhone.trim()) {
-            newErrors.customerPhone = "Please enter your phone number";
-        } else if (
-            !/^[0-9]{10,11}$/.test(customerPhone.trim().replace(/[\s-]/g, ""))
-        ) {
-            newErrors.customerPhone = "Please enter a valid phone number";
-        }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmitOrder = async (e) => {
         e.preventDefault();
-        console.log("Place Order clicked - starting submission");
-        console.log("Cart:", cart);
-        console.log("Customer Name:", customerName);
-        console.log("Customer Phone:", customerPhone);
 
         if (!validateForm()) {
-            console.log("Validation failed");
             setErrors({ ...errors, submit: "Please check your information" });
             return;
         }
-
-        console.log("Validation passed");
 
         if (cart.length === 0) {
             setErrors({ ...errors, submit: "Your selection is empty" });
@@ -104,7 +88,7 @@ export default function LuxuryCartDrawer({
         try {
             const orderData = {
                 customer_name: customerName.trim(),
-                customer_phone: customerPhone.trim(),
+                customer_phone: "N/A",
                 items: cart.map((item) => ({
                     menu_item_id: item.menu_item_id,
                     quantity: item.quantity,
@@ -117,26 +101,10 @@ export default function LuxuryCartDrawer({
                 })),
             };
 
-            console.log("Submitting order data:", orderData);
-
             const response = await axios.post("/api/orders", orderData);
 
-            console.log("Order response received:", response.data);
-
-            setOrderSuccess(true);
-            setOrderNumber(response.data.order.id);
-            setSuccessMessage(`Order #${response.data.order.id} placed successfully!`);
-
-            // Clear form only (keep cart for now to prevent drawer from unmounting)
-            setCustomerName("");
-            setCustomerPhone("");
-
-            // Scroll to top of drawer to show success screen
-            if (isMobile) {
-                setTimeout(() => {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }, 100);
-            }
+            // Redirect to tracking page with order number
+            window.location.href = `/track-order?order=${response.data.order.order_number}`;
         } catch (error) {
             console.error("=== ERROR SUBMITTING ORDER ===");
             console.error("Error:", error);
@@ -148,15 +116,17 @@ export default function LuxuryCartDrawer({
                 const serverErrors = error.response.data.errors || {};
                 setErrors({
                     ...serverErrors,
-                    submit: "Please check your order details and try again."
+                    submit: "Please check your order details and try again.",
                 });
             } else if (error.response?.status === 500) {
                 setErrors({
-                    submit: error.response.data.message || "Server error. Please try again later."
+                    submit:
+                        error.response.data.message ||
+                        "Server error. Please try again later.",
                 });
             } else {
                 setErrors({
-                    submit: "Network error. Please check your connection and try again."
+                    submit: "Network error. Please check your connection and try again.",
                 });
             }
         } finally {
@@ -283,7 +253,7 @@ export default function LuxuryCartDrawer({
                                     Your order number
                                 </p>
                                 <div className="text-5xl md:text-6xl font-light text-coffee-accent mb-3 tracking-wide">
-                                    #{String(orderNumber).padStart(4, '0')}
+                                    #{String(orderNumber).padStart(4, "0")}
                                 </div>
                                 <p className="text-sm text-medium-gray font-light">
                                     Please keep this number for tracking
@@ -296,8 +266,9 @@ export default function LuxuryCartDrawer({
                                     What's Next?
                                 </p>
                                 <p className="text-medium-gray font-light text-sm leading-relaxed">
-                                    We'll notify you when your order is ready for pickup.
-                                    Estimated preparation time: 5-10 minutes.
+                                    We'll notify you when your order is ready
+                                    for pickup. Estimated preparation time: 5-10
+                                    minutes.
                                 </p>
                             </div>
 
@@ -471,52 +442,6 @@ export default function LuxuryCartDrawer({
                                                 />
                                             </svg>
                                             <span>{errors.customerName}</span>
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-light text-dark-gray mb-2 tracking-wide">
-                                        Phone Number
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        value={customerPhone}
-                                        onChange={(e) => {
-                                            setCustomerPhone(e.target.value);
-                                            if (errors.customerPhone) {
-                                                setErrors((prev) => ({
-                                                    ...prev,
-                                                    customerPhone: null,
-                                                }));
-                                            }
-                                        }}
-                                        className={`w-full px-4 py-3 border rounded-md font-light transition-all duration-200
-                                            ${
-                                                errors.customerPhone
-                                                    ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                                                    : "border-light-gray focus:border-coffee-accent focus:ring-1 focus:ring-coffee-accent"
-                                            }
-                                            focus:outline-none placeholder-medium-gray`}
-                                        placeholder="09XX XXX XXXX"
-                                        required
-                                    />
-                                    {errors.customerPhone && (
-                                        <p className="text-sm text-red-600 font-light mt-2 flex items-center space-x-1 animate-slide-down">
-                                            <svg
-                                                className="w-4 h-4"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                />
-                                            </svg>
-                                            <span>{errors.customerPhone}</span>
                                         </p>
                                     )}
                                 </div>

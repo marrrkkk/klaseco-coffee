@@ -73,6 +73,9 @@ Route::prefix('orders')->group(function () {
   // Get queue statistics for smart polling
   Route::get('/stats', [OrderController::class, 'getQueueStats']);
 
+  // Get order history (all non-pending orders)
+  Route::get('/history', [OrderController::class, 'getOrderHistory']);
+
   // Get specific order details
   Route::get('/{order}', [OrderController::class, 'show']);
 

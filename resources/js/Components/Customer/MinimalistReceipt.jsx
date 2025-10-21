@@ -223,16 +223,7 @@ export default function MinimalistReceipt({ isOpen, onClose, order }) {
                                                     displayData.customer_name}
                                             </span>
                                         </div>
-                                        <div className="receipt-row">
-                                            <span className="receipt-label">
-                                                Phone
-                                            </span>
-                                            <span className="receipt-value">
-                                                {displayData.order_info
-                                                    ?.customer_phone ||
-                                                    displayData.customer_phone}
-                                            </span>
-                                        </div>
+
                                         <div className="receipt-row">
                                             <span className="receipt-label">
                                                 Ordered
@@ -453,6 +444,7 @@ export default function MinimalistReceipt({ isOpen, onClose, order }) {
                                                                                             {
                                                                                                 addonQty
                                                                                             }
+
                                                                                             ×
                                                                                             ₱
                                                                                             {parseFloat(
@@ -460,6 +452,7 @@ export default function MinimalistReceipt({ isOpen, onClose, order }) {
                                                                                             ).toFixed(
                                                                                                 2
                                                                                             )}
+
                                                                                             )
                                                                                         </span>
                                                                                         <span className="text-coffee-accent">

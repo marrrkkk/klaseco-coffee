@@ -288,6 +288,11 @@ export const PollingProvider = ({ children }) => {
                         signal: abortControllers.current[key].signal,
                     });
 
+                    // Check if response exists (could be undefined if aborted)
+                    if (!response) {
+                        return;
+                    }
+
                     // Handle 304 Not Modified - no changes
                     if (response.status === 304) {
                         dispatch({ type: "CLEAR_ERROR", key });

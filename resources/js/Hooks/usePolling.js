@@ -24,6 +24,15 @@ export function usePolling(key, fetchFunction, options = {}) {
     // Keep track of the current abortController
     const abortControllerRef = useRef(null);
 
+    // Store callbacks in refs to avoid dependency issues
+    const onSuccessRef = useRef(onSuccess);
+    const onErrorRef = useRef(onError);
+
+    useEffect(() => {
+        onSuccessRef.current = onSuccess;
+        onErrorRef.current = onError;
+    }, [onSuccess, onError]);
+
     // Enhanced fetch function that works with the polling context
     const enhancedFetchFunction = useCallback(
         async ({ headers, signal }) => {
@@ -35,37 +44,35 @@ export function usePolling(key, fetchFunction, options = {}) {
             const controller = new AbortController();
             abortControllerRef.current = controller;
 
-            try {
-                const response = await fetch(
-                    fetchFunction.url || fetchFunction,
-                    {
-                        method: "GET",
-                        headers: {
-                            ...headers,
-                            Accept: "application/json",
-                        },
-                        signal: abortControllerRef.current.signal,
-                    }
+            const response = await fetch(fetchFunction.url || fetchFunction, {
+                method: "GET",
+                headers: {
+                    ...headers,
+                    Accept: "application/json",
+                },
+                signal: abortControllerRef.current.signal,
+            });
+
+            if (!response.ok && response.status !== 304) {
+                throw new Error(
+                    `HTTP ${response.status}: ${response.statusText}`
                 );
-
-                if (!response.ok && response.status !== 304) {
-                    throw new Error(
-                        `HTTP ${response.status}: ${response.statusText}`
-                    );
-                }
-
-                return response;
-            } catch (error) {
-                // Don't throw for aborted requests
-                if (error.name === "AbortError") {
-                    console.debug("Request aborted");
-                    return;
-                }
-                throw error;
             }
+
+            return response;
         },
         [fetchFunction]
     );
+
+    // Memoize success handler
+    const handleSuccess = useCallback(async (response) => {
+        if (response.status !== 304) {
+            const data = await response.json();
+            if (onSuccessRef.current) {
+                onSuccessRef.current(data);
+            }
+        }
+    }, []);
 
     // Start polling when enabled and dependencies change
     useEffect(() => {
@@ -78,31 +85,13 @@ export function usePolling(key, fetchFunction, options = {}) {
             interval,
             orderCount,
             hasActiveOrders,
-            onSuccess: async (response) => {
-                if (response.status !== 304) {
-                    const data = await response.json();
-                    if (onSuccess) {
-                        onSuccess(data);
-                    }
-                }
-            },
-            onError,
+            onSuccess: handleSuccess,
+            onError: onErrorRef.current,
         });
 
         return cleanup;
-    }, [
-        key,
-        enhancedFetchFunction,
-        interval,
-        orderCount,
-        hasActiveOrders,
-        enabled,
-        startPolling,
-        stopPolling,
-        onSuccess,
-        onError,
-        ...dependencies,
-    ]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [key, interval, orderCount, hasActiveOrders, enabled, ...dependencies]);
 
     // Cleanup on unmount or when key changes
     useEffect(() => {

@@ -52,6 +52,23 @@ export default function PremiumMenuPage() {
         }
     };
 
+    // Load cart from localStorage on mount
+    useEffect(() => {
+        const savedCart = localStorage.getItem("cart");
+        if (savedCart) {
+            try {
+                setCart(JSON.parse(savedCart));
+            } catch (e) {
+                console.error("Error loading cart:", e);
+            }
+        }
+    }, []);
+
+    // Save cart to localStorage whenever it changes
+    useEffect(() => {
+        localStorage.setItem("cart", JSON.stringify(cart));
+    }, [cart]);
+
     const addToCart = (item, size, variant, selectedAddons, quantity = 1) => {
         const unitPrice = calculateItemPrice(item.base_price, size);
         const addonTotal = selectedAddons.reduce(
@@ -272,57 +289,48 @@ export default function PremiumMenuPage() {
                         </div>
                     </div>
 
-                    {/* Premium Cart Experience */}
-                    {cart.length > 0 && (
-                        <>
-                            {/* Mobile Cart Button */}
-                            <div className="lg:hidden fixed bottom-0 left-0 right-0 p-6 bg-primary-white border-t border-light-gray">
-                                <button
-                                    onClick={() => setIsCartOpen(true)}
-                                    className="w-full bg-dark-gray text-primary-white py-4 px-6 rounded-none font-light tracking-wide flex items-center justify-between transition-all duration-300 hover:bg-coffee-accent"
-                                >
-                                    <span className="flex items-center space-x-3">
-                                        <span className="bg-coffee-accent text-primary-white px-3 py-1 rounded-full text-sm">
-                                            {getCartItemCount()}
-                                        </span>
-                                        <span>View Selection</span>
-                                    </span>
-                                    <span className="font-normal">
-                                        {formatCurrency(getCartTotal())}
-                                    </span>
-                                </button>
-                            </div>
+                    {/* Floating Cart Button - Always Visible */}
+                    <button
+                        onClick={() => setIsCartOpen(true)}
+                        className={`fixed bottom-6 right-6 z-50 bg-coffee-accent text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 ${
+                            cart.length > 0
+                                ? "w-16 h-16"
+                                : "w-14 h-14 opacity-50"
+                        }`}
+                    >
+                        <div className="relative flex items-center justify-center">
+                            <svg
+                                className="w-6 h-6"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                                />
+                            </svg>
+                            {cart.length > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-white text-coffee-accent text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                                    {getCartItemCount()}
+                                </span>
+                            )}
+                        </div>
+                    </button>
 
-                            {/* Desktop Cart Sidebar */}
-                            <div className="hidden lg:block w-96 z-[100]">
-                                <div className="fixed w-96 right-0 top-0 h-screen bg-primary-white border-l border-light-gray z-[100]">
-                                    <LuxuryCartDrawer
-                                        isOpen={true}
-                                        onClose={() => {}}
-                                        cart={cart}
-                                        onRemoveItem={removeFromCart}
-                                        onUpdateQuantity={
-                                            updateCartItemQuantity
-                                        }
-                                        onClearCart={clearCart}
-                                        total={getCartTotal()}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Mobile Cart Drawer */}
-                            <LuxuryCartDrawer
-                                isOpen={isCartOpen}
-                                onClose={() => setIsCartOpen(false)}
-                                cart={cart}
-                                onRemoveItem={removeFromCart}
-                                onUpdateQuantity={updateCartItemQuantity}
-                                onClearCart={clearCart}
-                                total={getCartTotal()}
-                                isMobile={true}
-                            />
-                        </>
-                    )}
+                    {/* Cart Drawer */}
+                    <LuxuryCartDrawer
+                        isOpen={isCartOpen}
+                        onClose={() => setIsCartOpen(false)}
+                        cart={cart}
+                        onRemoveItem={removeFromCart}
+                        onUpdateQuantity={updateCartItemQuantity}
+                        onClearCart={clearCart}
+                        total={getCartTotal()}
+                        isMobile={true}
+                    />
                 </div>
             </div>
         </MinimalistLayout>

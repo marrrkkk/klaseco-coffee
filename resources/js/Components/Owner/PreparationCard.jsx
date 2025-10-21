@@ -1,4 +1,4 @@
-import { ClockIcon, UserIcon, PhoneIcon } from "@heroicons/react/24/outline";
+import { ClockIcon, UserIcon } from "@heroicons/react/24/outline";
 import ReadyNotificationButton from "./ReadyNotificationButton";
 
 export default function PreparationCard({ order, onMarkReady, isProcessing }) {
@@ -86,12 +86,6 @@ export default function PreparationCard({ order, onMarkReady, isProcessing }) {
                             {order.customer_name}
                         </p>
                     </div>
-                    <div className="flex items-center space-x-2">
-                        <PhoneIcon className="h-4 w-4 text-gray-400" />
-                        <p className="text-sm text-gray-600">
-                            {order.customer_phone}
-                        </p>
-                    </div>
                 </div>
 
                 {/* Preparation Details */}
@@ -146,13 +140,6 @@ export default function PreparationCard({ order, onMarkReady, isProcessing }) {
                         </span>
                     </div>
                 </div>
-
-                {/* Cashier Info */}
-                {order.cashier && (
-                    <div className="mb-4 text-xs text-gray-500">
-                        Accepted by: {order.cashier.name}
-                    </div>
-                )}
 
                 {/* Ready Notification Button */}
                 <ReadyNotificationButton

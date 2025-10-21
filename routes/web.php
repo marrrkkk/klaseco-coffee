@@ -11,6 +11,10 @@ Route::get('/', function () {
     return Inertia::render('PremiumMenuPage');
 })->name('home');
 
+Route::get('/product', function () {
+    return Inertia::render('ProductDetailPage');
+})->name('product.detail');
+
 Route::get('/track-order', function () {
     return Inertia::render('OrderTrackingPage');
 })->name('track-order');
@@ -24,14 +28,14 @@ Route::get('/staff', [StaffController::class, 'showRoleSelection'])->name('staff
 Route::post('/staff/set-role', [StaffController::class, 'setRole'])->name('staff.set-role');
 Route::post('/staff/logout', [StaffController::class, 'clearRole'])->name('staff.logout');
 
-// Protected staff routes
+// Staff routes (no authentication for testing)
 Route::get('/cashier', function () {
     return Inertia::render('CashierDashboard');
-})->middleware('staff:cashier')->name('cashier');
+})->name('cashier');
 
-Route::get('/owner', function () {
-    return Inertia::render('OwnerDashboard');
-})->middleware('staff:owner')->name('owner');
+Route::get('/barista', function () {
+    return Inertia::render('BaristaDashboard');
+})->name('barista');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');

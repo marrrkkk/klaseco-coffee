@@ -106,8 +106,8 @@ export function useSeamlessPolling(key, fetchFunction, options = {}) {
             setTransitionData({ from: fromData, to: toData });
 
             // Call user-provided transition handler
-            if (onTransition) {
-                onTransition(fromData, toData);
+            if (onTransitionRef.current) {
+                onTransitionRef.current(fromData, toData);
             }
 
             // Clear transition state after animation
@@ -116,33 +116,41 @@ export function useSeamlessPolling(key, fetchFunction, options = {}) {
                 setTransitionData(null);
             }, 300);
         },
-        [onTransition, smoothTransitions]
+        [smoothTransitions]
     );
+
+    // Store callbacks in refs to avoid dependency issues
+    const onSuccessRef = useRef(onSuccess);
+    const onErrorRef = useRef(onError);
+    const onTransitionRef = useRef(onTransition);
+
+    useEffect(() => {
+        onSuccessRef.current = onSuccess;
+        onErrorRef.current = onError;
+        onTransitionRef.current = onTransition;
+    }, [onSuccess, onError, onTransition]);
 
     // Enhanced success handler with transition detection
     const handleSuccess = useCallback(
-        async (response, metadata) => {
-            if (response.status !== 304) {
-                const data = await response.json();
-
-                // Detect changes for smooth transitions
-                if (lastDataRef.current && smoothTransitions) {
-                    const hasChanges =
-                        JSON.stringify(lastDataRef.current) !==
-                        JSON.stringify(data);
-                    if (hasChanges) {
-                        handleTransition(lastDataRef.current, data);
-                    }
-                }
-
-                lastDataRef.current = data;
-
-                if (onSuccess) {
-                    onSuccess(data, metadata);
+        (data, metadata) => {
+            // data is already parsed JSON from SeamlessPollingContext
+            // Detect changes for smooth transitions
+            if (lastDataRef.current && smoothTransitions) {
+                const hasChanges =
+                    JSON.stringify(lastDataRef.current) !==
+                    JSON.stringify(data);
+                if (hasChanges) {
+                    handleTransition(lastDataRef.current, data);
                 }
             }
+
+            lastDataRef.current = data;
+
+            if (onSuccessRef.current) {
+                onSuccessRef.current(data, metadata);
+            }
         },
-        [onSuccess, handleTransition, smoothTransitions]
+        [handleTransition, smoothTransitions]
     );
 
     // Enhanced error handler with graceful degradation
@@ -162,11 +170,11 @@ export function useSeamlessPolling(key, fetchFunction, options = {}) {
                 return;
             }
 
-            if (onError) {
-                onError(error, metadata);
+            if (onErrorRef.current) {
+                onErrorRef.current(error, metadata);
             }
         },
-        [onError, key]
+        [key]
     );
 
     // Start seamless polling when enabled and dependencies change
@@ -189,18 +197,13 @@ export function useSeamlessPolling(key, fetchFunction, options = {}) {
         });
 
         return cleanup;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         key,
-        enhancedFetchFunction,
         interval,
         orderCount,
         hasActiveOrders,
         enabled,
-        startSeamlessPolling,
-        stopSeamlessPolling,
-        handleSuccess,
-        handleError,
-        handleTransition,
         priority,
         backgroundUpdates,
         gracefulDegradation,
@@ -313,6 +316,17 @@ export function useSeamlessSmartPolling(role, onDataUpdate, options = {}) {
         [role]
     );
 
+    // Memoize callbacks to prevent infinite loops
+    const handleStatsSuccess = useCallback((data) => {
+        if (data.success) {
+            setQueueStats(data.data);
+        }
+    }, []);
+
+    const handleStatsError = useCallback((err) => {
+        console.debug("Error fetching queue stats:", err);
+    }, []);
+
     // Poll queue statistics with seamless updates
     const { error: statsError } = useSeamlessPolling(
         `queue-stats-${role}`,
@@ -324,17 +338,43 @@ export function useSeamlessSmartPolling(role, onDataUpdate, options = {}) {
             backgroundUpdates: true,
             gracefulDegradation: true,
             smoothTransitions: false, // Stats don't need smooth transitions
-            onSuccess: (data) => {
-                if (data.success) {
-                    setQueueStats(data.data);
-                }
-            },
-            onError: (err) => {
-                console.debug("Error fetching queue stats:", err);
-            },
+            onSuccess: handleStatsSuccess,
+            onError: handleStatsError,
             dependencies: [role],
         }
     );
+
+    // Store onDataUpdate in ref to avoid recreating callbacks
+    const onDataUpdateRef = useRef(onDataUpdate);
+    useEffect(() => {
+        onDataUpdateRef.current = onDataUpdate;
+    }, [onDataUpdate]);
+
+    // Memoize order callbacks
+    const handleOrdersSuccess = useCallback((data) => {
+        if (data.success) {
+            setOrders(data.data);
+            setError(null);
+            setIsLoading(false);
+
+            // Call the provided callback
+            if (onDataUpdateRef.current) {
+                onDataUpdateRef.current(data.data, data.meta);
+            }
+        } else {
+            setError("Failed to fetch orders");
+            setIsLoading(false);
+        }
+    }, []);
+
+    const handleOrdersError = useCallback((err, metadata) => {
+        // Only set error state for non-background updates or critical failures
+        if (!metadata.isBackgroundUpdate || metadata.consecutiveErrors >= 3) {
+            setError("Connection temporarily unavailable");
+        }
+        console.debug(`Error fetching orders:`, err);
+        setIsLoading(false);
+    }, []);
 
     // Poll actual order data with seamless updates and smooth transitions
     const {
@@ -351,32 +391,8 @@ export function useSeamlessSmartPolling(role, onDataUpdate, options = {}) {
         backgroundUpdates: true,
         gracefulDegradation: true,
         smoothTransitions,
-        onSuccess: (data) => {
-            if (data.success) {
-                setOrders(data.data);
-                setError(null);
-                setIsLoading(false);
-
-                // Call the provided callback
-                if (onDataUpdate) {
-                    onDataUpdate(data.data, data.meta);
-                }
-            } else {
-                setError("Failed to fetch orders");
-                setIsLoading(false);
-            }
-        },
-        onError: (err, metadata) => {
-            // Only set error state for non-background updates or critical failures
-            if (
-                !metadata.isBackgroundUpdate ||
-                metadata.consecutiveErrors >= 3
-            ) {
-                setError("Connection temporarily unavailable");
-            }
-            console.debug(`Error fetching ${role} orders:`, err);
-            setIsLoading(false);
-        },
+        onSuccess: handleOrdersSuccess,
+        onError: handleOrdersError,
         onTransition: handleOrderTransition,
         dependencies: [role],
     });
