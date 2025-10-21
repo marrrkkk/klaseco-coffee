@@ -143,25 +143,27 @@ export default function PremiumMenuPage() {
         setCart([]);
     };
 
-    const handleScroll = (e) => {
-        const container = e.target;
-        const { scrollTop } = container;
-
-        // Find the current visible category
+    const handleScroll = () => {
+        // Find the current visible category based on scroll position
         for (const category of categories) {
             const element = categoryRefs.current[category.id];
             if (element) {
-                const { offsetTop, offsetHeight } = element;
-                if (
-                    scrollTop >= offsetTop - 100 &&
-                    scrollTop < offsetTop + offsetHeight - 100
-                ) {
+                const rect = element.getBoundingClientRect();
+
+                // Check if element is in viewport (with some offset for better UX)
+                if (rect.top <= 200 && rect.bottom > 200) {
                     setActiveCategory(category.id);
                     break;
                 }
             }
         }
     };
+
+    // Add scroll listener to window
+    useEffect(() => {
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, [categories]);
 
     const handleCategoryClick = (categoryId) => {
         setActiveCategory(categoryId);
@@ -196,9 +198,12 @@ export default function PremiumMenuPage() {
                     </div>
                 </div>
 
-                <div className="flex">
+                <div className="flex relative">
                     {/* Elegant Categories Navigation */}
-                    <div className="hidden lg:block w-80 bg-primary-white border-r border-light-gray sticky top-0 h-screen">
+                    <div
+                        className="hidden lg:block w-80 bg-primary-white border-r border-light-gray sticky top-60 self-start overflow-y-auto"
+                        style={{ maxHeight: "calc(100vh - 4rem)" }}
+                    >
                         <div className="p-8">
                             <h2 className="text-xl font-light text-dark-gray mb-8 tracking-wide">
                                 Collections
@@ -224,12 +229,9 @@ export default function PremiumMenuPage() {
                     </div>
 
                     {/* Premium Menu Content */}
-                    <div
-                        className="flex-1 max-h-screen overflow-y-auto"
-                        onScroll={handleScroll}
-                    >
-                        {/* Mobile Categories */}
-                        <div className="lg:hidden bg-primary-white border-b border-light-gray sticky top-0 z-30">
+                    <div className="flex-1">
+                        {/* Mobile Categories - Fixed at Bottom */}
+                        <div className="lg:hidden bg-primary-white border-t border-light-gray fixed bottom-0 left-0 right-0 z-30 shadow-lg">
                             <div className="overflow-x-auto">
                                 <div className="flex px-6 py-4 space-x-8">
                                     {categories.map((category) => (
@@ -252,7 +254,7 @@ export default function PremiumMenuPage() {
                         </div>
 
                         {/* Premium Product Sections */}
-                        <div className="pb-32">
+                        <div className="pb-32 lg:pb-32">
                             {categories.map((category) => (
                                 <div
                                     key={category.id}
@@ -292,7 +294,7 @@ export default function PremiumMenuPage() {
                     {/* Floating Cart Button - Always Visible */}
                     <button
                         onClick={() => setIsCartOpen(true)}
-                        className={`fixed bottom-6 right-6 z-50 bg-coffee-accent text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 ${
+                        className={`fixed bottom-24 lg:bottom-6 right-6 z-50 bg-coffee-accent text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 ${
                             cart.length > 0
                                 ? "w-16 h-16"
                                 : "w-14 h-14 opacity-50"
