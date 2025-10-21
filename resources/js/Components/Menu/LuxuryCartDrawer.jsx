@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { formatCurrency } from "@/Utils/currency";
-import { useNotify } from "@/Hooks/useNotify";
 import axios from "axios";
 
 export default function LuxuryCartDrawer({
@@ -9,6 +8,7 @@ export default function LuxuryCartDrawer({
     cart,
     onRemoveItem,
     onUpdateQuantity,
+    onClearCart,
     total,
     isMobile = false,
 }) {
@@ -18,7 +18,7 @@ export default function LuxuryCartDrawer({
     const [orderSuccess, setOrderSuccess] = useState(false);
     const [orderNumber, setOrderNumber] = useState(null);
     const [errors, setErrors] = useState({});
-    const notify = useNotify();
+    const [successMessage, setSuccessMessage] = useState("");
 
     // Mobile gesture handling
     const [touchStart, setTouchStart] = useState(null);
@@ -80,18 +80,26 @@ export default function LuxuryCartDrawer({
 
     const handleSubmitOrder = async (e) => {
         e.preventDefault();
+        console.log("Place Order clicked - starting submission");
+        console.log("Cart:", cart);
+        console.log("Customer Name:", customerName);
+        console.log("Customer Phone:", customerPhone);
 
         if (!validateForm()) {
-            notify.validationError("Please check your information");
+            console.log("Validation failed");
+            setErrors({ ...errors, submit: "Please check your information" });
             return;
         }
 
+        console.log("Validation passed");
+
         if (cart.length === 0) {
-            notify.validationError("Your selection is empty");
+            setErrors({ ...errors, submit: "Your selection is empty" });
             return;
         }
 
         setIsSubmitting(true);
+        setErrors({});
 
         try {
             const orderData = {
@@ -109,33 +117,47 @@ export default function LuxuryCartDrawer({
                 })),
             };
 
+            console.log("Submitting order data:", orderData);
+
             const response = await axios.post("/api/orders", orderData);
+
+            console.log("Order response received:", response.data);
 
             setOrderSuccess(true);
             setOrderNumber(response.data.order.id);
-            notify.orderSubmitted(response.data.order.id);
+            setSuccessMessage(`Order #${response.data.order.id} placed successfully!`);
 
-            // Clear form
+            // Clear form only (keep cart for now to prevent drawer from unmounting)
             setCustomerName("");
             setCustomerPhone("");
+
+            // Scroll to top of drawer to show success screen
+            if (isMobile) {
+                setTimeout(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }, 100);
+            }
         } catch (error) {
-            console.error("Error submitting order:", error);
+            console.error("=== ERROR SUBMITTING ORDER ===");
+            console.error("Error:", error);
             console.error("Error response:", error.response?.data);
-            console.error("Order data sent:", orderData);
+            console.error("Error status:", error.response?.status);
+            console.error("Error message:", error.message);
 
             if (error.response?.status === 422) {
                 const serverErrors = error.response.data.errors || {};
-                setErrors(serverErrors);
-                notify.validationError(
-                    "Please check your order details and try again."
-                );
+                setErrors({
+                    ...serverErrors,
+                    submit: "Please check your order details and try again."
+                });
             } else if (error.response?.status === 500) {
-                notify.validationError(
-                    error.response.data.message ||
-                        "Server error. Please try again later."
-                );
+                setErrors({
+                    submit: error.response.data.message || "Server error. Please try again later."
+                });
             } else {
-                notify.networkError();
+                setErrors({
+                    submit: "Network error. Please check your connection and try again."
+                });
             }
         } finally {
             setIsSubmitting(false);
@@ -146,6 +168,10 @@ export default function LuxuryCartDrawer({
         if (orderSuccess) {
             setOrderSuccess(false);
             setOrderNumber(null);
+            // Clear the cart when closing the success screen
+            if (onClearCart) {
+                onClearCart();
+            }
         }
         setErrors({});
         setDragOffset(0);
@@ -195,56 +221,110 @@ export default function LuxuryCartDrawer({
             </div>
 
             {orderSuccess ? (
-                /* Elegant Order Success */
-                <div className="flex-1 p-8 flex flex-col items-center justify-center text-center">
-                    <div className="w-16 h-16 bg-coffee-accent rounded-full flex items-center justify-center mb-8">
-                        <svg
-                            className="w-8 h-8 text-primary-white"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                /* Full Screen Order Success Overlay */
+                <div className="absolute inset-0 bg-primary-white z-[110] flex flex-col">
+                    {/* Close Button */}
+                    <div className="absolute top-6 right-6 z-[111]">
+                        <button
+                            onClick={handleClose}
+                            className="text-medium-gray hover:text-dark-gray transition-colors duration-300 p-2"
                         >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                            />
-                        </svg>
+                            <svg
+                                className="w-6 h-6"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={1.5}
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
+                        </button>
                     </div>
 
-                    <h4 className="text-2xl font-light text-dark-gray mb-4 tracking-wide">
-                        Order Placed Successfully
-                    </h4>
+                    {/* Success Content - Starts from Top */}
+                    <div className="flex-1 overflow-y-auto pt-20 pb-8 px-8">
+                        <div className="max-w-md mx-auto space-y-8 text-center">
+                            {/* Success Icon */}
+                            <div className="flex justify-center">
+                                <div className="w-24 h-24 bg-coffee-accent rounded-full flex items-center justify-center shadow-xl">
+                                    <svg
+                                        className="w-12 h-12 text-primary-white"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2.5}
+                                            d="M5 13l4 4L19 7"
+                                        />
+                                    </svg>
+                                </div>
+                            </div>
 
-                    <div className="bg-warm-white border border-light-gray p-6 mb-8">
-                        <p className="text-medium-gray font-light mb-2">
-                            Your order number
-                        </p>
-                        <div className="text-3xl font-light text-dark-gray mb-2">
-                            #{orderNumber}
+                            {/* Success Title */}
+                            <div>
+                                <h4 className="text-3xl md:text-4xl font-light text-dark-gray tracking-wide mb-2">
+                                    Order Placed Successfully
+                                </h4>
+                                <p className="text-medium-gray font-light">
+                                    Thank you for your order!
+                                </p>
+                            </div>
+
+                            {/* Order Number Card */}
+                            <div className="bg-warm-white border-2 border-coffee-accent rounded-xl p-8 shadow-lg">
+                                <p className="text-medium-gray font-light mb-3 text-xs uppercase tracking-widest">
+                                    Your order number
+                                </p>
+                                <div className="text-5xl md:text-6xl font-light text-coffee-accent mb-3 tracking-wide">
+                                    #{String(orderNumber).padStart(4, '0')}
+                                </div>
+                                <p className="text-sm text-medium-gray font-light">
+                                    Please keep this number for tracking
+                                </p>
+                            </div>
+
+                            {/* What's Next Card */}
+                            <div className="bg-light-gray rounded-xl p-6">
+                                <p className="text-dark-gray font-medium text-sm mb-3 uppercase tracking-wider">
+                                    What's Next?
+                                </p>
+                                <p className="text-medium-gray font-light text-sm leading-relaxed">
+                                    We'll notify you when your order is ready for pickup.
+                                    Estimated preparation time: 5-10 minutes.
+                                </p>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="space-y-3 pt-4">
+                                <button
+                                    onClick={handleClose}
+                                    className="w-full bg-coffee-accent text-primary-white py-4 px-8 rounded-xl font-light tracking-wide
+                                             hover:bg-dark-gray transition-all duration-300
+                                             transform hover:scale-[1.02] active:scale-[0.98]
+                                             shadow-lg hover:shadow-xl
+                                             focus:outline-none focus:ring-2 focus:ring-coffee-accent focus:ring-offset-2"
+                                >
+                                    Continue Shopping
+                                </button>
+                                <a
+                                    href="/track-order"
+                                    className="block w-full border-2 border-coffee-accent text-coffee-accent py-4 px-8 rounded-xl font-light tracking-wide
+                                             hover:bg-coffee-accent hover:text-primary-white transition-all duration-300
+                                             transform hover:scale-[1.02] active:scale-[0.98]
+                                             focus:outline-none focus:ring-2 focus:ring-coffee-accent focus:ring-offset-2"
+                                >
+                                    Track Your Order
+                                </a>
+                            </div>
                         </div>
-                        <p className="text-sm text-medium-gray font-light">
-                            Please keep this number for tracking
-                        </p>
                     </div>
-
-                    <div className="bg-light-gray p-6 mb-8 max-w-sm">
-                        <p className="text-dark-gray font-light text-sm mb-2">
-                            What's Next?
-                        </p>
-                        <p className="text-medium-gray font-light text-sm">
-                            We'll notify you when your order is ready for
-                            pickup. Estimated preparation time: 5-10 minutes.
-                        </p>
-                    </div>
-
-                    <button
-                        onClick={handleClose}
-                        className="bg-dark-gray text-primary-white py-3 px-8 font-light tracking-wide hover:bg-coffee-accent transition-all duration-300"
-                    >
-                        Continue Shopping
-                    </button>
                 </div>
             ) : (
                 <>
@@ -456,6 +536,27 @@ export default function LuxuryCartDrawer({
                                         </p>
                                     </div>
 
+                                    {errors.submit && (
+                                        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                            <p className="text-sm text-red-600 font-light flex items-center space-x-2">
+                                                <svg
+                                                    className="w-4 h-4"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                    />
+                                                </svg>
+                                                <span>{errors.submit}</span>
+                                            </p>
+                                        </div>
+                                    )}
+
                                     <button
                                         type="submit"
                                         disabled={isSubmitting}
@@ -481,10 +582,10 @@ export default function LuxuryCartDrawer({
 
     if (isMobile) {
         return (
-            <div className="fixed inset-0 z-50 overflow-hidden">
+            <div className="fixed inset-0 z-[100] overflow-hidden">
                 {/* Backdrop with fade animation */}
                 <div
-                    className="absolute inset-0 bg-dark-gray transition-opacity duration-300"
+                    className="absolute inset-0 bg-dark-gray transition-opacity duration-300 z-[100]"
                     style={{ opacity: isOpen ? 0.5 : 0 }}
                     onClick={handleClose}
                 ></div>
@@ -492,7 +593,7 @@ export default function LuxuryCartDrawer({
                 {/* Mobile Drawer with swipe gesture */}
                 <div
                     ref={drawerRef}
-                    className="absolute right-0 top-0 h-full w-full max-w-md bg-primary-white transition-transform duration-300 ease-out"
+                    className="absolute right-0 top-0 h-full w-full max-w-md bg-primary-white transition-transform duration-300 ease-out shadow-2xl z-[101]"
                     style={{
                         transform: `translateX(${dragOffset}px)`,
                         transition:
@@ -500,6 +601,7 @@ export default function LuxuryCartDrawer({
                                 ? "none"
                                 : "transform 300ms ease-out",
                     }}
+                    onClick={(e) => e.stopPropagation()}
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}

@@ -7,6 +7,7 @@ use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
@@ -65,13 +66,14 @@ class OrderController extends Controller
           foreach ($item['addons'] as $addon) {
             $addonModel = \App\Models\Addon::findOrFail($addon['addon_id']);
 
-            $orderItem->orderItemAddons()->create([
+            $orderItem->addons()->create([
               'addon_id' => $addon['addon_id'],
               'quantity' => $addon['quantity'],
               'unit_price' => $addonModel->price,
             ]);
 
-            $totalAmount += $addonModel->price * $addon['quantity'];
+            // Addon cost should be multiplied by both addon quantity and item quantity
+            $totalAmount += $addonModel->price * $addon['quantity'] * $item['quantity'];
           }
         }
       }
@@ -82,13 +84,19 @@ class OrderController extends Controller
 
       return response()->json([
         'message' => 'Order placed successfully',
-        'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.orderItemAddons.addon'])),
+        'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.addons.addon'])),
       ], 201);
     } catch (\Exception $e) {
       DB::rollBack();
+      Log::error('Order creation failed', [
+        'error' => $e->getMessage(),
+        'trace' => $e->getTraceAsString(),
+        'request_data' => $request->all()
+      ]);
       return response()->json([
         'message' => 'Failed to create order',
         'error' => $e->getMessage(),
+        'details' => config('app.debug') ? $e->getTraceAsString() : null,
       ], 500);
     }
   }
@@ -98,7 +106,7 @@ class OrderController extends Controller
    */
   public function getOrderStatus(Order $order): JsonResponse
   {
-    $order->load(['orderItems.menuItem', 'orderItems.orderItemAddons.addon', 'cashier', 'owner']);
+    $order->load(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier', 'owner']);
 
     return response()->json([
       'order' => $this->formatOrderResponse($order),
@@ -112,7 +120,7 @@ class OrderController extends Controller
   public function getPendingOrders(): JsonResponse
   {
     $orders = Order::where('status', OrderStatus::PENDING)
-      ->with(['orderItems.menuItem', 'orderItems.orderItemAddons.addon'])
+      ->with(['orderItems.menuItem', 'orderItems.addons.addon'])
       ->orderBy('created_at', 'asc')
       ->get();
 
@@ -128,7 +136,7 @@ class OrderController extends Controller
   public function getActiveOrders(): JsonResponse
   {
     $orders = Order::whereIn('status', [OrderStatus::ACCEPTED, OrderStatus::PREPARING])
-      ->with(['orderItems.menuItem', 'orderItems.orderItemAddons.addon', 'cashier'])
+      ->with(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier'])
       ->orderBy('created_at', 'asc')
       ->get();
 
@@ -143,7 +151,7 @@ class OrderController extends Controller
   public function getAcceptedOrders(): JsonResponse
   {
     $orders = Order::where('status', OrderStatus::ACCEPTED)
-      ->with(['orderItems.menuItem', 'orderItems.orderItemAddons.addon', 'cashier'])
+      ->with(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier'])
       ->orderBy('created_at', 'asc')
       ->get();
 
@@ -164,7 +172,7 @@ class OrderController extends Controller
     }
 
     $orders = Order::where('status', $status)
-      ->with(['orderItems.menuItem', 'orderItems.orderItemAddons.addon', 'cashier', 'owner'])
+      ->with(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier', 'owner'])
       ->orderBy('created_at', 'desc')
       ->get();
 
@@ -190,7 +198,7 @@ class OrderController extends Controller
    */
   public function show(Order $order): JsonResponse
   {
-    $order->load(['orderItems.menuItem', 'orderItems.orderItemAddons.addon', 'cashier', 'owner']);
+    $order->load(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier', 'owner']);
 
     return response()->json([
       'order' => $this->formatOrderResponse($order),
@@ -210,7 +218,7 @@ class OrderController extends Controller
 
     return response()->json([
       'message' => 'Order status updated successfully',
-      'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.orderItemAddons.addon', 'cashier', 'owner'])),
+      'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier', 'owner'])),
       'status_display' => $this->getElegantStatusDisplay($order->status),
     ]);
   }
@@ -233,7 +241,7 @@ class OrderController extends Controller
 
     return response()->json([
       'message' => 'Order accepted successfully',
-      'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.orderItemAddons.addon', 'cashier'])),
+      'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier'])),
       'status_display' => $this->getElegantStatusDisplay($order->status),
     ]);
   }
@@ -256,7 +264,7 @@ class OrderController extends Controller
 
     return response()->json([
       'message' => 'Order rejected successfully',
-      'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.orderItemAddons.addon', 'cashier'])),
+      'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier'])),
       'status_display' => $this->getElegantStatusDisplay($order->status),
     ]);
   }
@@ -279,7 +287,7 @@ class OrderController extends Controller
 
     return response()->json([
       'message' => 'Order marked as ready successfully',
-      'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.orderItemAddons.addon', 'cashier', 'owner'])),
+      'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier', 'owner'])),
       'status_display' => $this->getElegantStatusDisplay($order->status),
     ]);
   }
@@ -299,7 +307,7 @@ class OrderController extends Controller
 
     return response()->json([
       'message' => 'Order marked as served successfully',
-      'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.orderItemAddons.addon', 'cashier', 'owner'])),
+      'order' => $this->formatOrderResponse($order->fresh(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier', 'owner'])),
       'status_display' => $this->getElegantStatusDisplay($order->status),
     ]);
   }
@@ -315,7 +323,7 @@ class OrderController extends Controller
       ], 400);
     }
 
-    $order->load(['orderItems.menuItem', 'orderItems.orderItemAddons.addon', 'cashier', 'owner']);
+    $order->load(['orderItems.menuItem', 'orderItems.addons.addon', 'cashier', 'owner']);
 
     return response()->json([
       'receipt' => [
@@ -326,12 +334,12 @@ class OrderController extends Controller
         'items' => $order->orderItems->map(function ($item) {
           return [
             'name' => $item->menuItem->name,
-            'size' => ucfirst($item->size),
-            'variant' => ucfirst($item->variant),
+            'size' => ucfirst($item->size->value),
+            'variant' => ucfirst($item->variant->value),
             'quantity' => $item->quantity,
             'unit_price' => number_format($item->unit_price, 2),
             'subtotal' => number_format($item->subtotal, 2),
-            'addons' => $item->orderItemAddons->map(function ($addon) {
+            'addons' => $item->addons->map(function ($addon) {
               return [
                 'name' => $addon->addon->name,
                 'quantity' => $addon->quantity,
@@ -370,13 +378,13 @@ class OrderController extends Controller
             'description' => $item->menuItem->description,
           ],
           'quantity' => $item->quantity,
-          'size' => $item->size,
-          'size_display' => ucfirst($item->size),
-          'variant' => $item->variant,
-          'variant_display' => ucfirst($item->variant),
+          'size' => $item->size->value,
+          'size_display' => ucfirst($item->size->value),
+          'variant' => $item->variant->value,
+          'variant_display' => ucfirst($item->variant->value),
           'unit_price' => number_format((float) $item->unit_price, 2),
           'subtotal' => number_format((float) $item->subtotal, 2),
-          'addons' => $item->orderItemAddons->map(function ($addon) {
+          'addons' => $item->addons->map(function ($addon) {
             return [
               'id' => $addon->id,
               'name' => $addon->addon->name,

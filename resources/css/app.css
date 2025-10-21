@@ -1,9 +1,9 @@
+/* Import sophisticated interaction design styles */
+@import "./sophisticated-interactions.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import sophisticated interaction design styles */
-@import "./sophisticated-interactions.css";
 
 /* Premium minimalist coffee theme styles */
 @layer components {
@@ -50,12 +50,12 @@
 
     /* Form elements */
     .coffee-input {
-        @apply border-coffee-300 focus:border-coffee-500 focus:ring-coffee-500 
+        @apply border-coffee-300 focus:border-coffee-500 focus:ring-coffee-500
                bg-white placeholder-coffee-400 text-coffee-900 rounded-lg;
     }
 
     .coffee-select {
-        @apply border-coffee-300 focus:border-coffee-500 focus:ring-coffee-500 
+        @apply border-coffee-300 focus:border-coffee-500 focus:ring-coffee-500
                bg-white text-coffee-900 rounded-lg;
     }
 
@@ -65,41 +65,41 @@
 
     /* Button variants */
     .coffee-button {
-        @apply bg-coffee-600 hover:bg-coffee-700 active:bg-coffee-800 
-               text-white font-medium py-2 px-4 rounded-lg 
+        @apply bg-coffee-600 hover:bg-coffee-700 active:bg-coffee-800
+               text-white font-medium py-2 px-4 rounded-lg
                transition-all duration-200 shadow-sm hover:shadow-md
                focus:outline-none focus:ring-2 focus:ring-coffee-500 focus:ring-offset-2;
     }
 
     .coffee-button-lg {
-        @apply bg-coffee-600 hover:bg-coffee-700 active:bg-coffee-800 
+        @apply bg-coffee-600 hover:bg-coffee-700 active:bg-coffee-800
                text-white font-semibold py-3 px-6 rounded-lg text-lg
                transition-all duration-200 shadow-md hover:shadow-lg
                focus:outline-none focus:ring-2 focus:ring-coffee-500 focus:ring-offset-2;
     }
 
     .coffee-button-outline {
-        @apply border-2 border-coffee-600 text-coffee-600 hover:bg-coffee-600 hover:text-white 
+        @apply border-2 border-coffee-600 text-coffee-600 hover:bg-coffee-600 hover:text-white
                font-medium py-2 px-4 rounded-lg transition-all duration-200
                focus:outline-none focus:ring-2 focus:ring-coffee-500 focus:ring-offset-2;
     }
 
     .coffee-button-ghost {
-        @apply text-coffee-600 hover:bg-coffee-50 hover:text-coffee-700 
+        @apply text-coffee-600 hover:bg-coffee-50 hover:text-coffee-700
                font-medium py-2 px-4 rounded-lg transition-all duration-200
                focus:outline-none focus:ring-2 focus:ring-coffee-500 focus:ring-offset-2;
     }
 
     .coffee-button-danger {
-        @apply bg-red-600 hover:bg-red-700 active:bg-red-800 
-               text-white font-medium py-2 px-4 rounded-lg 
+        @apply bg-red-600 hover:bg-red-700 active:bg-red-800
+               text-white font-medium py-2 px-4 rounded-lg
                transition-all duration-200 shadow-sm hover:shadow-md
                focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
     }
 
     /* Card components */
     .coffee-card {
-        @apply bg-white rounded-lg border border-coffee-200 coffee-shadow 
+        @apply bg-white rounded-lg border border-coffee-200 coffee-shadow
                hover:coffee-shadow-lg transition-all duration-200;
     }
 

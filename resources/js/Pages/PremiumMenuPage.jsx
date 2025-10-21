@@ -53,6 +53,13 @@ export default function PremiumMenuPage() {
     };
 
     const addToCart = (item, size, variant, selectedAddons, quantity = 1) => {
+        const unitPrice = calculateItemPrice(item.base_price, size);
+        const addonTotal = selectedAddons.reduce(
+            (sum, addon) => sum + parseFloat(addon.price || 0),
+            0
+        );
+        const itemTotal = (unitPrice + addonTotal) * quantity;
+
         const cartItem = {
             id: Date.now(), // Temporary ID for cart management
             menu_item_id: item.id,
@@ -60,30 +67,23 @@ export default function PremiumMenuPage() {
             size,
             variant,
             quantity,
-            base_price: item.base_price,
-            unit_price: calculateItemPrice(item.base_price, size),
-            subtotal: calculateItemPrice(item.base_price, size) * quantity,
+            base_price: parseFloat(item.base_price),
+            unit_price: unitPrice,
+            subtotal: itemTotal,
             addons: selectedAddons.map((addon) => ({
                 id: addon.id,
                 name: addon.name,
-                price: addon.price,
+                price: parseFloat(addon.price || 0),
                 quantity: 1,
             })),
         };
-
-        // Add addon costs to subtotal
-        const addonTotal = cartItem.addons.reduce(
-            (sum, addon) => sum + addon.price * addon.quantity,
-            0
-        );
-        cartItem.subtotal += addonTotal * quantity;
 
         setCart((prevCart) => [...prevCart, cartItem]);
     };
 
     const calculateItemPrice = (basePrice, size) => {
         const multiplier = size === "extra" ? 1.3 : 1.0;
-        return Math.round(basePrice * multiplier);
+        return Math.round(parseFloat(basePrice) * multiplier);
     };
 
     const removeFromCart = (cartItemId) => {
@@ -120,6 +120,10 @@ export default function PremiumMenuPage() {
 
     const getCartItemCount = () => {
         return cart.reduce((total, item) => total + item.quantity, 0);
+    };
+
+    const clearCart = () => {
+        setCart([]);
     };
 
     const handleScroll = (e) => {
@@ -290,8 +294,8 @@ export default function PremiumMenuPage() {
                             </div>
 
                             {/* Desktop Cart Sidebar */}
-                            <div className="hidden lg:block w-96">
-                                <div className="fixed w-96 right-0 top-0 h-screen bg-primary-white border-l border-light-gray">
+                            <div className="hidden lg:block w-96 z-[100]">
+                                <div className="fixed w-96 right-0 top-0 h-screen bg-primary-white border-l border-light-gray z-[100]">
                                     <LuxuryCartDrawer
                                         isOpen={true}
                                         onClose={() => {}}
@@ -300,6 +304,7 @@ export default function PremiumMenuPage() {
                                         onUpdateQuantity={
                                             updateCartItemQuantity
                                         }
+                                        onClearCart={clearCart}
                                         total={getCartTotal()}
                                     />
                                 </div>
@@ -312,6 +317,7 @@ export default function PremiumMenuPage() {
                                 cart={cart}
                                 onRemoveItem={removeFromCart}
                                 onUpdateQuantity={updateCartItemQuantity}
+                                onClearCart={clearCart}
                                 total={getCartTotal()}
                                 isMobile={true}
                             />

@@ -16,7 +16,7 @@ export default function CoffeeProductCard({ item, addons, onAddToCart }) {
 
     const calculatePrice = (size) => {
         const multiplier = size === "extra" ? 1.3 : 1.0;
-        return Math.round(item.base_price * multiplier);
+        return Math.round(parseFloat(item.base_price) * multiplier);
     };
 
     const handleAddonToggle = (addon) => {
@@ -50,7 +50,7 @@ export default function CoffeeProductCard({ item, addons, onAddToCart }) {
     const getTotalPrice = () => {
         const basePrice = calculatePrice(selectedSize);
         const addonPrice = selectedAddons.reduce(
-            (sum, addon) => sum + addon.price,
+            (sum, addon) => sum + parseFloat(addon.price || 0),
             0
         );
         return (basePrice + addonPrice) * quantity;
@@ -91,7 +91,7 @@ export default function CoffeeProductCard({ item, addons, onAddToCart }) {
                     {/* Sophisticated Action */}
                     <button
                         onClick={() => setShowCustomization(!showCustomization)}
-                        className={`w-full py-3 px-6 font-light tracking-wide transition-all duration-300 
+                        className={`w-full py-3 px-6 font-light tracking-wide transition-all duration-300
                             transform hover:scale-[1.02] active:scale-[0.98]
                             focus:outline-none focus:ring-2 focus:ring-coffee-accent focus:ring-offset-2
                             ${
@@ -160,8 +160,8 @@ export default function CoffeeProductCard({ item, addons, onAddToCart }) {
                     {/* Premium Add to Cart */}
                     <button
                         onClick={handleAddToCart}
-                        className="w-full bg-dark-gray text-primary-white py-4 px-6 font-light tracking-wide 
-                            hover:bg-coffee-accent transition-all duration-300 
+                        className="w-full bg-dark-gray text-primary-white py-4 px-6 font-light tracking-wide
+                            hover:bg-coffee-accent transition-all duration-300
                             flex items-center justify-between group
                             transform hover:scale-[1.02] active:scale-[0.98]
                             hover:shadow-lg

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
     CheckCircleIcon,
     ClockIcon,
@@ -7,11 +7,6 @@ import {
 } from "@heroicons/react/24/outline";
 import { CheckCircleIcon as CheckCircleIconSolid } from "@heroicons/react/24/solid";
 import MinimalistReceipt from "./MinimalistReceipt";
-import { useOrderTracking } from "@/Hooks/useSmartPolling";
-import {
-    OrderProgressIndicator,
-    StatusBadge,
-} from "@/Components/StatusTransition";
 import SophisticatedLoadingState from "@/Components/SophisticatedLoadingState";
 import axios from "axios";
 
@@ -24,30 +19,10 @@ export default function OrderTrackingInterface() {
     const [showReceipt, setShowReceipt] = useState(false);
     const [statusAnimation, setStatusAnimation] = useState("");
 
-    // Use smart order tracking with elegant callbacks
-    const {
-        orderStatus: trackedOrderStatus,
-        isLoading: trackingLoading,
-        error: trackingError,
-        checkOrderStatus: trackOrder,
-        smartInterval,
-        isActive,
-    } = useOrderTracking(orderNumber, (orderData, meta) => {
-        // Handle status updates with smooth transitions
-        if (orderData && orderData.status !== orderStatus?.status) {
-            setStatusAnimation("animate-pulse");
-            setTimeout(() => setStatusAnimation(""), 1000);
-        }
-        setOrderStatus(orderData);
-        if (["served", "cancelled"].includes(orderData.status)) {
-            setPolling(false);
-        }
-    });
-
-    // Use tracked order status if available, otherwise use local state
-    const currentOrderStatus = trackedOrderStatus || orderStatus;
-    const currentError = trackingError || error;
-    const currentLoading = trackingLoading || loading;
+    // Simple order status check without complex polling
+    const currentOrderStatus = orderStatus;
+    const currentError = error;
+    const currentLoading = loading;
 
     const handleTrackOrder = async () => {
         if (!orderNumber.trim()) {
@@ -59,8 +34,17 @@ export default function OrderTrackingInterface() {
         setError("");
 
         try {
-            await trackOrder(orderNumber);
+            const response = await axios.get(`/api/orders/${orderNumber}/status`);
+            const data = response.data;
+            const orderData = data.order || data;
+
+            setOrderStatus(orderData);
             setPolling(true);
+
+            // Start simple polling for status updates
+            if (!["served", "cancelled"].includes(orderData.status)) {
+                startSimplePolling(orderNumber);
+            }
         } catch (err) {
             setError("Order not found. Please check your order number.");
             setOrderStatus(null);
@@ -68,6 +52,34 @@ export default function OrderTrackingInterface() {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Simple polling without complex context
+    const startSimplePolling = (orderId) => {
+        const pollInterval = setInterval(async () => {
+            try {
+                const response = await axios.get(`/api/orders/${orderId}/status`);
+                const data = response.data;
+                const orderData = data.order || data;
+
+                if (orderData && orderData.status !== orderStatus?.status) {
+                    setStatusAnimation("animate-pulse");
+                    setTimeout(() => setStatusAnimation(""), 1000);
+                }
+
+                setOrderStatus(orderData);
+
+                if (["served", "cancelled"].includes(orderData.status)) {
+                    clearInterval(pollInterval);
+                    setPolling(false);
+                }
+            } catch (err) {
+                console.error("Polling error:", err);
+            }
+        }, 5000); // Poll every 5 seconds
+
+        // Cleanup on unmount
+        return () => clearInterval(pollInterval);
     };
 
     const markAsServed = async () => {
@@ -166,7 +178,7 @@ export default function OrderTrackingInterface() {
                 className={`
                 w-16 h-16 rounded-full ${config.bgColor} ${
                     config.borderColor
-                } border-2 
+                } border-2
                 flex items-center justify-center mb-4 mx-auto
                 ${animated ? statusAnimation : ""}
                 transition-all duration-300
@@ -205,7 +217,7 @@ export default function OrderTrackingInterface() {
                                 type="text"
                                 value={orderNumber}
                                 onChange={(e) => setOrderNumber(e.target.value)}
-                                className="w-full px-4 py-4 border border-light-gray rounded-lg 
+                                className="w-full px-4 py-4 border border-light-gray rounded-lg
                                          focus:ring-1 focus:ring-coffee-accent focus:border-coffee-accent
                                          bg-primary-white text-dark-gray font-light
                                          placeholder-medium-gray transition-all duration-200"
@@ -218,8 +230,8 @@ export default function OrderTrackingInterface() {
                         <button
                             onClick={handleTrackOrder}
                             disabled={currentLoading}
-                            className="w-full bg-coffee-accent text-primary-white py-4 rounded-lg 
-                                     font-light tracking-wide hover:bg-opacity-90 
+                            className="w-full bg-coffee-accent text-primary-white py-4 rounded-lg
+                                     font-light tracking-wide hover:bg-opacity-90
                                      transition-all duration-200 disabled:opacity-50
                                      transform hover:scale-[1.02] active:scale-[0.98]
                                      hover:shadow-md
@@ -248,12 +260,6 @@ export default function OrderTrackingInterface() {
                 {/* Elegant Order Status Display */}
                 {currentOrderStatus && (
                     <div className="bg-primary-white border border-light-gray rounded-2xl p-8 shadow-sm animate-slide-up">
-                        {/* Modern Progress Indicator */}
-                        <OrderProgressIndicator
-                            status={currentOrderStatus.status}
-                            className="mb-8"
-                        />
-
                         {/* Progress Bar */}
                         <StatusProgressBar
                             progress={
@@ -331,14 +337,14 @@ export default function OrderTrackingInterface() {
                         </div>
 
                         {/* Elegant Order Items */}
-                        {currentOrderStatus.order_items &&
-                            currentOrderStatus.order_items.length > 0 && (
+                        {currentOrderStatus.items &&
+                            currentOrderStatus.items.length > 0 && (
                                 <div className="mb-8">
                                     <h4 className="text-sm font-light text-medium-gray mb-4 tracking-wide uppercase">
                                         Your Order
                                     </h4>
                                     <div className="space-y-4">
-                                        {currentOrderStatus.order_items.map(
+                                        {currentOrderStatus.items.map(
                                             (item, index) => (
                                                 <div
                                                     key={index}
@@ -364,20 +370,17 @@ export default function OrderTrackingInterface() {
                                                                 1 &&
                                                                 ` • Qty: ${item.quantity}`}
                                                         </div>
-                                                        {item.order_item_addons &&
-                                                            item
-                                                                .order_item_addons
-                                                                .length > 0 && (
+                                                        {item.addons &&
+                                                            item.addons.length >
+                                                                0 && (
                                                                 <div className="text-sm text-coffee-accent font-light mt-1">
                                                                     +{" "}
-                                                                    {item.order_item_addons
+                                                                    {item.addons
                                                                         .map(
                                                                             (
                                                                                 addon
                                                                             ) =>
-                                                                                addon
-                                                                                    .addon
-                                                                                    ?.name
+                                                                                addon.name
                                                                         )
                                                                         .join(
                                                                             ", "
@@ -404,8 +407,8 @@ export default function OrderTrackingInterface() {
                                 <button
                                     onClick={markAsServed}
                                     disabled={currentLoading}
-                                    className="w-full bg-success-green text-primary-white py-4 rounded-lg 
-                                             font-light tracking-wide hover:bg-opacity-90 
+                                    className="w-full bg-success-green text-primary-white py-4 rounded-lg
+                                             font-light tracking-wide hover:bg-opacity-90
                                              transition-all duration-200 disabled:opacity-50
                                              transform hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0
                                              hover:shadow-lg
@@ -452,8 +455,8 @@ export default function OrderTrackingInterface() {
                                 </p>
                                 <button
                                     onClick={() => setShowReceipt(true)}
-                                    className="bg-coffee-accent text-primary-white px-8 py-3 rounded-lg 
-                                             font-light tracking-wide hover:bg-opacity-90 
+                                    className="bg-coffee-accent text-primary-white px-8 py-3 rounded-lg
+                                             font-light tracking-wide hover:bg-opacity-90
                                              transition-all duration-200
                                              focus:outline-none focus:ring-2 focus:ring-coffee-accent focus:ring-offset-2"
                                 >
@@ -474,7 +477,7 @@ export default function OrderTrackingInterface() {
                         )}
 
                         {/* Elegant Real-time Indicator */}
-                        {isActive &&
+                        {polling &&
                             currentOrderStatus.status !== "served" &&
                             currentOrderStatus.status !== "cancelled" && (
                                 <div className="mt-8 pt-6 border-t border-light-gray">

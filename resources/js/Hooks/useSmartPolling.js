@@ -209,7 +209,8 @@ export function useOrderTracking(orderNumber, onStatusUpdate, options = {}) {
             hasActiveOrders: isActive,
             enabled: enabled && orderNumber && smartInterval !== null,
             onSuccess: (data) => {
-                const orderData = data.success ? data.data : data;
+                // Handle different response formats
+                const orderData = data.order || (data.success ? data.data : data);
                 setOrderStatus(orderData);
                 setError("");
 
@@ -245,7 +246,8 @@ export function useOrderTracking(orderNumber, onStatusUpdate, options = {}) {
                 }
 
                 const data = await response.json();
-                const orderData = data.success ? data.data : data;
+                // Handle different response formats
+                const orderData = data.order || (data.success ? data.data : data);
 
                 setOrderStatus(orderData);
 
