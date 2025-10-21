@@ -11,6 +11,8 @@ export default function CashierDashboard() {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [activeTab, setActiveTab] = useState("pending"); // "pending" or "history"
     const [historyOrders, setHistoryOrders] = useState([]);
+    const [calculatorOrder, setCalculatorOrder] = useState(null);
+    const [amountReceived, setAmountReceived] = useState("");
 
     const handleOrdersUpdate = useCallback((ordersData, meta) => {
         setLastUpdated(new Date());
@@ -46,6 +48,18 @@ export default function CashierDashboard() {
             smoothTransitions: true,
         });
 
+    const handleAcceptOrderClick = useCallback((order) => {
+        // Check payment method
+        if (order.payment_method === "cash") {
+            // Show calculator for cash payment
+            setCalculatorOrder(order);
+            setAmountReceived("");
+        } else {
+            // GCash - accept immediately
+            handleAcceptOrder(order.id);
+        }
+    }, []);
+
     const handleAcceptOrder = useCallback(async (orderId) => {
         setProcessingOrders((prev) => new Set(prev).add(orderId));
 
@@ -67,6 +81,10 @@ export default function CashierDashboard() {
 
             if (!data.success) {
                 console.error("Failed to accept order:", data.message);
+            } else {
+                // Close calculator if open
+                setCalculatorOrder(null);
+                setAmountReceived("");
             }
         } catch (err) {
             console.error("Network error occurred:", err);
@@ -78,6 +96,30 @@ export default function CashierDashboard() {
             });
         }
     }, []);
+
+    const handleCalculatorInput = useCallback((value) => {
+        if (value === "clear") {
+            setAmountReceived("");
+        } else if (value === "backspace") {
+            setAmountReceived((prev) => prev.slice(0, -1));
+        } else {
+            setAmountReceived((prev) => prev + value);
+        }
+    }, []);
+
+    const getChange = useCallback(() => {
+        if (!calculatorOrder || !amountReceived) return 0;
+        const received = parseFloat(amountReceived) || 0;
+        const total = parseFloat(calculatorOrder.total_amount) || 0;
+        return Math.max(0, received - total);
+    }, [calculatorOrder, amountReceived]);
+
+    const canAcceptCashPayment = useCallback(() => {
+        if (!calculatorOrder || !amountReceived) return false;
+        const received = parseFloat(amountReceived) || 0;
+        const total = parseFloat(calculatorOrder.total_amount) || 0;
+        return received >= total;
+    }, [calculatorOrder, amountReceived]);
 
     const handleRejectOrder = useCallback(async (orderId) => {
         setProcessingOrders((prev) => new Set(prev).add(orderId));
@@ -238,6 +280,22 @@ export default function CashierDashboard() {
                                                     <p className="text-sm font-medium text-dark-gray">
                                                         {order.customer_name}
                                                     </p>
+                                                    <div className="flex items-center space-x-3 mt-2">
+                                                        <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-50 text-blue-700 border border-blue-200">
+                                                            {order.order_type_display ||
+                                                                (order.order_type ===
+                                                                "dine_in"
+                                                                    ? "Dine In"
+                                                                    : "Take Away")}
+                                                        </span>
+                                                        <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-green-50 text-green-700 border border-green-200">
+                                                            {order.payment_method_display ||
+                                                                (order.payment_method ===
+                                                                "cash"
+                                                                    ? "Cash"
+                                                                    : "GCash")}
+                                                        </span>
+                                                    </div>
                                                 </div>
 
                                                 {/* Order Items */}
@@ -352,8 +410,8 @@ export default function CashierDashboard() {
                                                     </button>
                                                     <button
                                                         onClick={() =>
-                                                            handleAcceptOrder(
-                                                                order.id
+                                                            handleAcceptOrderClick(
+                                                                order
                                                             )
                                                         }
                                                         disabled={processingOrders.has(
@@ -483,6 +541,165 @@ export default function CashierDashboard() {
                         </div>
                     )}
                 </div>
+
+                {/* Cash Payment Calculator Modal */}
+                {calculatorOrder && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 overflow-y-auto">
+                        <div className="bg-white rounded-lg shadow-xl max-w-md w-full my-8 max-h-[90vh] flex flex-col">
+                            {/* Modal Header */}
+                            <div className="px-4 py-3 border-b border-light-gray">
+                                <h3 className="text-lg font-medium text-dark-gray">
+                                    Cash Payment - Order #{calculatorOrder.id}
+                                </h3>
+                                <p className="text-xs text-medium-gray mt-1">
+                                    {calculatorOrder.customer_name}
+                                </p>
+                            </div>
+
+                            {/* Modal Content - Scrollable */}
+                            <div className="px-4 py-3 overflow-y-auto flex-1">
+                                {/* Order Total */}
+                                <div className="mb-2 p-2 bg-warm-white rounded-lg">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs text-medium-gray">
+                                            Order Total
+                                        </span>
+                                        <span className="text-lg font-medium text-dark-gray">
+                                            {formatCurrency(
+                                                calculatorOrder.total_amount
+                                            )}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Amount Received Display */}
+                                <div className="mb-2">
+                                    <label className="block text-xs text-medium-gray mb-1">
+                                        Amount Received
+                                    </label>
+                                    <div className="text-2xl font-medium text-dark-gray text-center p-2 bg-light-gray rounded-lg flex items-center justify-center">
+                                        {amountReceived
+                                            ? `₱${amountReceived}`
+                                            : "₱0"}
+                                    </div>
+                                </div>
+
+                                {/* Change Display */}
+                                {amountReceived && canAcceptCashPayment() && (
+                                    <div className="mb-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs text-green-700">
+                                                Change
+                                            </span>
+                                            <span className="text-lg font-medium text-green-700">
+                                                {formatCurrency(getChange())}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Calculator Keypad */}
+                                <div className="grid grid-cols-3 gap-2 mb-2">
+                                    {[
+                                        "1",
+                                        "2",
+                                        "3",
+                                        "4",
+                                        "5",
+                                        "6",
+                                        "7",
+                                        "8",
+                                        "9",
+                                        ".",
+                                        "0",
+                                        "00",
+                                    ].map((num) => (
+                                        <button
+                                            key={num}
+                                            onClick={() =>
+                                                handleCalculatorInput(num)
+                                            }
+                                            className="p-3 text-lg font-medium text-dark-gray bg-light-gray hover:bg-medium-gray hover:text-white rounded-lg transition-all"
+                                        >
+                                            {num}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Quick Amount Buttons */}
+                                <div className="grid grid-cols-5 gap-1 mb-2">
+                                    {[20, 50, 100, 500, 1000].map((amount) => (
+                                        <button
+                                            key={amount}
+                                            onClick={() =>
+                                                setAmountReceived(
+                                                    amount.toString()
+                                                )
+                                            }
+                                            className="p-2 text-xs font-medium text-coffee-accent border border-coffee-accent hover:bg-coffee-accent hover:text-white rounded transition-all"
+                                        >
+                                            ₱{amount}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="grid grid-cols-3 gap-1">
+                                    <button
+                                        onClick={() =>
+                                            handleCalculatorInput("clear")
+                                        }
+                                        className="p-2 text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 rounded transition-all"
+                                    >
+                                        Clear
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            handleCalculatorInput("backspace")
+                                        }
+                                        className="p-2 text-xs font-medium text-medium-gray border border-light-gray hover:bg-light-gray rounded transition-all"
+                                    >
+                                        ← Back
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setCalculatorOrder(null);
+                                            setAmountReceived("");
+                                        }}
+                                        className="p-2 text-xs font-medium text-medium-gray border border-light-gray hover:bg-light-gray rounded transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="px-4 py-3 border-t border-light-gray bg-warm-white">
+                                <button
+                                    onClick={() =>
+                                        handleAcceptOrder(calculatorOrder.id)
+                                    }
+                                    disabled={
+                                        !canAcceptCashPayment() ||
+                                        processingOrders.has(calculatorOrder.id)
+                                    }
+                                    className="w-full bg-coffee-accent text-white py-3 px-4 rounded-lg font-medium hover:bg-opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {processingOrders.has(
+                                        calculatorOrder.id
+                                    ) ? (
+                                        <span className="flex items-center justify-center space-x-2">
+                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                            <span>Processing...</span>
+                                        </span>
+                                    ) : (
+                                        "Accept Payment & Confirm Order"
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </MinimalistLayout>
     );

@@ -22,6 +22,8 @@ class OrderController extends Controller
     $validated = $request->validate([
       'customer_name' => 'required|string|max:255',
       'customer_phone' => 'nullable|string|max:20',
+      'order_type' => 'required|in:dine_in,take_away',
+      'payment_method' => 'required|in:cash,gcash',
       'items' => 'required|array|min:1',
       'items.*.menu_item_id' => 'required|exists:menu_items,id',
       'items.*.quantity' => 'required|integer|min:1',
@@ -38,6 +40,8 @@ class OrderController extends Controller
       $order = Order::create([
         'customer_name' => $validated['customer_name'],
         'customer_phone' => $validated['customer_phone'],
+        'order_type' => $validated['order_type'],
+        'payment_method' => $validated['payment_method'],
         'status' => OrderStatus::PENDING,
         'total_amount' => 0, // Will be calculated
       ]);
@@ -451,6 +455,8 @@ class OrderController extends Controller
         'order_number' => str_pad($order->id, 4, '0', STR_PAD_LEFT),
         'customer_name' => $order->customer_name,
         'customer_phone' => $order->customer_phone,
+        'order_type' => $order->order_type === 'dine_in' ? 'Dine In' : 'Take Away',
+        'payment_method' => $order->payment_method === 'cash' ? 'Cash' : 'GCash',
         'items' => $order->orderItems->map(function ($item) {
           return [
             'name' => $item->menuItem->name,
@@ -486,6 +492,10 @@ class OrderController extends Controller
       'order_number' => str_pad($order->id, 4, '0', STR_PAD_LEFT),
       'customer_name' => $order->customer_name,
       'customer_phone' => $order->customer_phone,
+      'order_type' => $order->order_type,
+      'order_type_display' => $order->order_type === 'dine_in' ? 'Dine In' : 'Take Away',
+      'payment_method' => $order->payment_method,
+      'payment_method_display' => $order->payment_method === 'cash' ? 'Cash' : 'GCash',
       'status' => $order->status->value,
       'status_display' => $this->getElegantStatusDisplay($order->status),
       'total_amount' => number_format((float) $order->total_amount, 2),

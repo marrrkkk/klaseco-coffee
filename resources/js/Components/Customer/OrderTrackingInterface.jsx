@@ -329,6 +329,30 @@ export default function OrderTrackingInterface() {
                             </div>
                             <div className="flex justify-between items-center py-2 border-b border-light-gray">
                                 <span className="text-medium-gray font-light">
+                                    Order Type
+                                </span>
+                                <span className="text-dark-gray font-medium">
+                                    {currentOrderStatus.order_type_display ||
+                                        (currentOrderStatus.order_type ===
+                                        "dine_in"
+                                            ? "Dine In"
+                                            : "Take Away")}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center py-2 border-b border-light-gray">
+                                <span className="text-medium-gray font-light">
+                                    Payment
+                                </span>
+                                <span className="text-dark-gray font-medium">
+                                    {currentOrderStatus.payment_method_display ||
+                                        (currentOrderStatus.payment_method ===
+                                        "cash"
+                                            ? "Cash"
+                                            : "GCash")}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center py-2 border-b border-light-gray">
+                                <span className="text-medium-gray font-light">
                                     Total
                                 </span>
                                 <span className="text-dark-gray font-medium">
