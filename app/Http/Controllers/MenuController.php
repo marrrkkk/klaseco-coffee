@@ -35,7 +35,8 @@ class MenuController extends Controller
 
     return response()->json([
       'success' => true,
-      'data' => $menuItems
+      'category' => $category,
+      'items' => $menuItems
     ]);
   }
 
@@ -64,6 +65,35 @@ class MenuController extends Controller
     return response()->json([
       'categories' => $categories,
       'menu_items' => $menuItems,
+      'addons' => $addons
+    ]);
+  }
+
+  /**
+   * Get category with its menu items and addons
+   * Returns 404 if category doesn't exist
+   */
+  public function getCategoryWithItems($id): JsonResponse
+  {
+    $category = Category::find($id);
+
+    if (!$category) {
+      return response()->json([
+        'success' => false,
+        'message' => 'Category not found'
+      ], 404);
+    }
+
+    $menuItems = $category->menuItems()
+      ->where('is_available', true)
+      ->get();
+
+    $addons = Addon::where('is_available', true)->get();
+
+    return response()->json([
+      'success' => true,
+      'category' => $category,
+      'items' => $menuItems,
       'addons' => $addons
     ]);
   }

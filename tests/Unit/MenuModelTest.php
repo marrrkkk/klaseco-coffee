@@ -17,7 +17,7 @@ class MenuModelTest extends TestCase
   public function test_category_has_correct_fillable_attributes(): void
   {
     $category = new Category();
-    $expected = ['name', 'slug'];
+    $expected = ['name', 'slug', 'image_url'];
 
     $this->assertEquals($expected, $category->getFillable());
   }
@@ -58,6 +58,7 @@ class MenuModelTest extends TestCase
       'category_id',
       'name',
       'description',
+      'image_url',
       'base_price',
       'is_available',
     ];

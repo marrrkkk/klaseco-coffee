@@ -72,6 +72,8 @@ class OrderModelTest extends TestCase
     $expected = [
       'customer_name',
       'customer_phone',
+      'order_type',
+      'payment_method',
       'status',
       'total_amount',
       'cashier_id',

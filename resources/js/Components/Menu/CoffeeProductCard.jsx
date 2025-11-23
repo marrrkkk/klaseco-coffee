@@ -1,9 +1,10 @@
+import { memo } from "react";
 import { router } from "@inertiajs/react";
 import { formatCurrency } from "@/Utils/currency";
 import ProductImage from "./ProductImage";
 import PricingDisplay from "./PricingDisplay";
 
-export default function CoffeeProductCard({ item }) {
+const CoffeeProductCard = memo(function CoffeeProductCard({ item }) {
     const handleViewProduct = () => {
         router.visit(`/product?id=${item.id}`);
     };
@@ -65,4 +66,6 @@ export default function CoffeeProductCard({ item }) {
             </div>
         </div>
     );
-}
+});
+
+export default CoffeeProductCard;

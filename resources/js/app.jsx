@@ -33,6 +33,9 @@ createInertiaApp({
         );
     },
     progress: {
-        color: "#4B5563",
+        color: "#8B7355", // Coffee accent color
+        showSpinner: true,
+        delay: 100, // Reduced delay for more responsive feel
+        includeCSS: true,
     },
 });

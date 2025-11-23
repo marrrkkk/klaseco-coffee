@@ -270,6 +270,7 @@ export default function CartSidebar({
                                 </form>
                             </div>
                         )}
+                    </>
                 </div>
             </div>
         </div>

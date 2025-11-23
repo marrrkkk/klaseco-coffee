@@ -31,6 +31,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::prefix('menu')->group(function () {
   Route::get('/categories', [MenuController::class, 'getCategories']);
   Route::get('/categories/{category}/items', [MenuController::class, 'getMenuItemsByCategory']);
+  Route::get('/category/{id}', [MenuController::class, 'getCategoryWithItems']);
   Route::get('/addons', [MenuController::class, 'getAddons']);
   Route::get('/complete', [MenuController::class, 'getCompleteMenu']);
 });

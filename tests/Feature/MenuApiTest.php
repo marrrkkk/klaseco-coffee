@@ -229,4 +229,86 @@ class MenuApiTest extends TestCase
 
     $response->assertStatus(404);
   }
+
+  public function test_can_get_category_with_items_and_addons(): void
+  {
+    $category = Category::where('slug', 'coffee')->first();
+
+    $response = $this->getJson("/api/menu/category/{$category->id}");
+
+    $response->assertStatus(200)
+      ->assertJsonStructure([
+        'success',
+        'category' => [
+          'id',
+          'name',
+          'slug'
+        ],
+        'items' => [
+          '*' => [
+            'id',
+            'name',
+            'description',
+            'base_price',
+            'is_available'
+          ]
+        ],
+        'addons' => [
+          '*' => [
+            'id',
+            'name',
+            'price',
+            'is_available'
+          ]
+        ]
+      ])
+      ->assertJson([
+        'success' => true,
+        'category' => [
+          'id' => $category->id,
+          'name' => 'Coffee'
+        ]
+      ]);
+
+    // Verify only available items are returned
+    $items = $response->json('items');
+    foreach ($items as $item) {
+      $this->assertTrue($item['is_available']);
+      $this->assertEquals($category->id, $item['category_id']);
+    }
+
+    // Verify only available addons are returned
+    $addons = $response->json('addons');
+    foreach ($addons as $addon) {
+      $this->assertTrue($addon['is_available']);
+    }
+
+    // Should return 2 available addons
+    $this->assertCount(2, $addons);
+  }
+
+  public function test_category_endpoint_returns_404_for_invalid_id(): void
+  {
+    $response = $this->getJson('/api/menu/category/999');
+
+    $response->assertStatus(404)
+      ->assertJson([
+        'success' => false,
+        'message' => 'Category not found'
+      ]);
+  }
+
+  public function test_category_endpoint_filters_unavailable_items(): void
+  {
+    $category = Category::where('slug', 'non-coffee')->first();
+
+    $response = $this->getJson("/api/menu/category/{$category->id}");
+
+    $response->assertStatus(200);
+
+    // The non-coffee category has one item but it's unavailable
+    // So items array should be empty
+    $items = $response->json('items');
+    $this->assertCount(0, $items);
+  }
 }
