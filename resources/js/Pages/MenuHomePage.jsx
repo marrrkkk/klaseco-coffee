@@ -73,15 +73,14 @@ export default function MenuHomePage() {
                     </PageTransition>
 
                     {/* Category Grid Section */}
-                    <div className="max-w-7xl mx-auto py-12">
+                    <div className="max-w-7xl mx-auto py-8 sm:py-12">
                         <PageTransition delay={100}>
-                            <div className="text-center mb-12 px-6">
-                                <h2 className="text-3xl md:text-4xl font-light text-dark-gray mb-4 tracking-wide">
-                                    Explore Our Collections
+                            <div className="px-4 sm:px-6 mb-8">
+                                <h2 className="text-2xl sm:text-3xl font-semibold text-dark-gray mb-2">
+                                    Browse Menu
                                 </h2>
-                                <p className="text-lg text-medium-gray font-light max-w-2xl mx-auto leading-relaxed">
-                                    Discover our carefully curated categories of
-                                    premium coffee and beverages
+                                <p className="text-sm sm:text-base text-medium-gray">
+                                    Choose from our premium selection
                                 </p>
                             </div>
                         </PageTransition>

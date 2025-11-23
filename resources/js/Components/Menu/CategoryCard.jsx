@@ -22,8 +22,8 @@ const CategoryCard = memo(function CategoryCard({ category, onClick }) {
 
     return (
         <div onClick={handleClick} className="group cursor-pointer">
-            {/* Category Card with rounded square design */}
-            <div className="relative aspect-square overflow-hidden rounded-2xl bg-light-gray border border-light-gray hover:border-coffee-accent transition-all duration-300 hover:shadow-lg hover:scale-105">
+            {/* Modern Category Card */}
+            <div className="relative aspect-square overflow-hidden rounded-xl bg-primary-white shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-light-gray">
                 {/* Skeleton Loader */}
                 {!imageLoaded && (
                     <ImageSkeleton className="absolute inset-0 w-full h-full" />
@@ -41,16 +41,34 @@ const CategoryCard = memo(function CategoryCard({ category, onClick }) {
                     onError={handleImageError}
                     onLoad={handleImageLoad}
                     loading="lazy"
-                    className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-110 ${
+                    className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${
                         imageLoaded ? "opacity-100" : "opacity-0"
                     }`}
                 />
 
-                {/* Category Name Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end justify-center p-6">
-                    <h3 className="text-primary-white text-xl sm:text-2xl font-light tracking-wide text-center">
-                        {category.name}
-                    </h3>
+                {/* Modern Category Name Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex items-end p-4">
+                    <div className="w-full">
+                        <h3 className="text-primary-white text-lg sm:text-xl font-semibold mb-1">
+                            {category.name}
+                        </h3>
+                        <div className="flex items-center text-primary-white/80 text-xs sm:text-sm">
+                            <span>View Menu</span>
+                            <svg
+                                className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 5l7 7-7 7"
+                                />
+                            </svg>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
